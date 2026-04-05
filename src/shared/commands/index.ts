@@ -2,7 +2,9 @@ import { Context, InlineKeyboard } from "grammy";
 import { createHafezMenuFa } from "../../poets/hafez/fa";
 import { createKhayamMenuFa } from "../../poets/khayyam/fa";
 import { createMoulaviMenuFa } from "../../poets/molana/fa";
+import { saveAnalyticsEvent } from "../../services/analytics";
 import PersianPoemsTelegramBot from "../../services/telegram-bot";
+import { selectAndRenderRandomPoem } from "../random-poem";
 
 const poets: {
   [x: string]: {
@@ -33,6 +35,9 @@ const showMainMenu = (ctx: Context) => {
   Object.values(poets).forEach((poet) => {
     keyboard.text(poet.title, `select_poet_fa:${poet.id}`).row();
   });
+  keyboard
+    .text("یک شعر رندوم برایم بیاور", "random_poem_fa")
+    .row();
 
   return ctx.reply(text, {
     reply_markup: keyboard,
@@ -46,6 +51,9 @@ const createPoetListFa = async (ctx: Context) => {
   Object.values(poets).forEach((poet) => {
     keyboard.text(poet.title, `select_poet_fa:${poet.id}`).row();
   });
+  keyboard
+    .text("یک شعر رندوم برایم بیاور", "random_poem_fa")
+    .row();
 
   return ctx.editMessageText("لطفا شاعر مورد نظر خود را انتخاب نمایید.", {
     reply_markup: keyboard,
@@ -55,8 +63,9 @@ const createPoetListFa = async (ctx: Context) => {
 const addSelectPoetCallbacks = () => {
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /select_poet_fa:(.+)/,
-    async (ctx) => {
-      const poetId = ctx.match[1];
+    async (ctx: Context) => {
+      const poetId = ctx.match?.[1];
+      if (!poetId) return;
 
       switch (poetId) {
         case "hafez":
@@ -75,8 +84,17 @@ const addSelectPoetCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /back_to_poet_menu_fa/,
-    async (ctx) => {
+    async (ctx: Context) => {
       createPoetListFa(ctx);
+    }
+  );
+
+  PersianPoemsTelegramBot.bot?.callbackQuery(
+    /random_poem_fa/,
+    async (ctx: Context) => {
+      saveAnalyticsEvent(ctx, "random_poem_fa");
+      await ctx.answerCallbackQuery();
+      await selectAndRenderRandomPoem(ctx);
     }
   );
 };
