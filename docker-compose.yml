@@ -1,0 +1,14 @@
+services:
+  bot:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      # Override for local runs without HTTPS (Telegram still needs a public URL for webhooks).
+      BOT_TRANSPORT: ${BOT_TRANSPORT:-webhook}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      MONGODB_URL: ${MONGODB_URL}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      PORT: 3000
