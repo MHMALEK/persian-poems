@@ -1,12 +1,12 @@
 import { selectAndRenderRandomGhazal } from "../poets/hafez/fa";
 import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
-import { createLanguageMenu } from "../shared/commands";
+import { showMainMenu } from "../shared/commands";
 
 const addDefaultCommands = () => {
   PersianPoemsTelegramBot.addCommandEventListener("start", (ctx) => {
     saveAnalyticsEvent(ctx, "start");
-    createLanguageMenu(ctx);
+    showMainMenu(ctx);
   });
 
   PersianPoemsTelegramBot.addCommandEventListener("poem", (ctx) => {

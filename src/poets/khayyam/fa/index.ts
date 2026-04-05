@@ -7,7 +7,7 @@ import {
   getPoems,
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
-import { createLanguageMenu } from "../../../shared/commands";
+import { createPoetListFa } from "../../../shared/commands";
 const config = {
   pagination: {
     itemPerPage: 10,
@@ -159,7 +159,7 @@ const addkhayamFaCallbacks = () => {
   // callbacks
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /khayam_page:(.+)/,
-    async (ctx) => {
+    async (ctx: { match: string[]; callbackQuery: { data: string; }; }) => {
       const pageNum = parseInt(ctx.match[1]);
       saveAnalyticsEvent(ctx, `khayam_page:${pageNum}`);
 
@@ -173,7 +173,7 @@ const addkhayamFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /khayam_poems_select_fa:(.+)/,
-    async (ctx) => {
+    async (ctx: { match: string[]; }) => {
       const itemLink = ctx.match[1]; // Extract link from callback data
       const type = ctx.match[1].split("/khayyam/")[1];
       saveAnalyticsEvent(ctx, `khayam_poems_select_fa:${type}`);
@@ -185,7 +185,7 @@ const addkhayamFaCallbacks = () => {
     }
   );
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_robaee/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_robaee/, async (ctx: any) => {
     const htmlPage = await fetchHtmlPageFromGanjoor("khayyam", "robaee");
     const list = await getPoems(htmlPage);
     saveAnalyticsEvent(ctx, "khayam_robaee");
@@ -193,18 +193,18 @@ const addkhayamFaCallbacks = () => {
     showPage(list, ctx, 0, "editMessage", "robaee2");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_bio:fa/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_bio:fa/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "khayam_bio");
     showBio(ctx);
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_poems:fa/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_poems:fa/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "khayam_poems:fa");
 
     return createKhayam(ctx, "editMessage");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/back:fa/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/back:fa/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "back:fa");
 
     return createKhayamMenuFa(ctx, "editMessage");
@@ -212,17 +212,17 @@ const addkhayamFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /khayam_main_menu_back_fa/,
-    async (ctx) => {
+    async (ctx: any) => {
       saveAnalyticsEvent(ctx, "khayam_main_menu_back_fa");
 
       console.log(ctx);
-      return createLanguageMenu(ctx);
+      return createPoetListFa(ctx);
     }
   );
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /go-back-to-khayyam-list/,
-    async (ctx) => {
+    async (ctx: any) => {
       saveAnalyticsEvent(ctx, "go-back-to-khayyam-list");
 
       console.log(ctx);
@@ -232,7 +232,7 @@ const addkhayamFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /back_to_main_khayam/,
-    async (ctx) => {
+    async (ctx: any) => {
       saveAnalyticsEvent(ctx, "back_to_main_khayam");
 
       console.log(ctx);

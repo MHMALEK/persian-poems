@@ -7,7 +7,7 @@ import {
   getPoems,
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
-import { createLanguageMenu } from "../../../shared/commands";
+import { createPoetListFa } from "../../../shared/commands";
 import { splitMessage } from "../../../utils/splitter";
 const config = {
   pagination: {
@@ -437,7 +437,7 @@ const addmoulaviFaCallbacks = () => {
       saveAnalyticsEvent(ctx, "moulavi_main_menu_back_fa");
 
       console.log(ctx);
-      return createLanguageMenu(ctx);
+      return createPoetListFa(ctx);
     }
   );
 

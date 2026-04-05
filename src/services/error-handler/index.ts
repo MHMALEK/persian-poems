@@ -2,25 +2,24 @@ import { Context, InlineKeyboard } from "grammy";
 import * as Sentry from "@sentry/node";
 
 const initSentryForErrorsTracking = () => {
-  if (process.env.NODE_ENV != "development") {
-    Sentry.init({
-      dsn: "https://977d17376c5d4b56bef76b07d2e8968d@o522176.ingest.sentry.io/4505341620125696",
-      tracesSampleRate: 1.0,
-    });
-  }
+  if (process.env.NODE_ENV === "development") return;
+  const dsn = process.env.SENTRY_DSN?.trim();
+  if (!dsn) return;
+  Sentry.init({
+    dsn,
+    tracesSampleRate: 1.0,
+  });
 };
 
 initSentryForErrorsTracking();
 
 const createError = (ctx: Context) => {
-  if (Sentry) {
-    Sentry.captureException("error");
-  }
+  Sentry.captureException(new Error("poem_fetch_failed"));
   const keyboard = new InlineKeyboard();
 
-  keyboard.text("Back", `hafez_poems:en`);
+  keyboard.text("بازگشت", `hafez_poems:fa`);
 
-  ctx.reply("We couldn't fetch the poem at the moment. please try again", {
+  ctx.reply("در حال حاضر دریافت شعر ممکن نیست. لطفاً دوباره تلاش کنید.", {
     reply_markup: keyboard,
   });
 };

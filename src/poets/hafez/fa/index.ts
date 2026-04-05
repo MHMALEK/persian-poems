@@ -8,7 +8,7 @@ import {
   loadHtml,
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
-import { createLanguageMenu } from "../../../shared/commands";
+import { createPoetListFa } from "../../../shared/commands";
 const config = {
   pagination: {
     itemPerPage: 10,
@@ -192,11 +192,11 @@ const selectAndRenderRandomGhazal = async (ctx: Context) => {
 
 const addHafezFaCallbacks = () => {
   // callbacks
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_page:(.+)/, async (ctx) => {
-    const pageNum = parseInt(ctx.match[1]);
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_page:(.+)/, async (ctx: Context) => {
+    const pageNum = parseInt(String(ctx.match![1]));
     saveAnalyticsEvent(ctx, `hafez_page:${pageNum}`);
 
-    const type = ctx.callbackQuery.data.split(":")[2];
+    const type = ctx.callbackQuery!.data!.split(":")[2];
     const htmlPage = await fetchHtmlPageFromGanjoor("hafez", "ghazal");
     const list = await getPoems(htmlPage);
 
@@ -205,9 +205,9 @@ const addHafezFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /hafez_poems_select_fa:(.+)/,
-    async (ctx) => {
-      const itemLink = ctx.match[1]; // Extract link from callback data
-      const type = ctx.match[1].split("/hafez/")[1];
+    async (ctx: Context) => {
+      const itemLink = String(ctx.match![1]);
+      const type = itemLink.split("/hafez/")[1];
       saveAnalyticsEvent(ctx, `hafez_poems_select_fa:${type}`);
 
       const htmlPage = await fetchHtmlPageFromGanjoor("hafez", type);
@@ -217,14 +217,14 @@ const addHafezFaCallbacks = () => {
     }
   );
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_ghazal/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_ghazal/, async (ctx: any) => {
     const htmlPage = await fetchHtmlPageFromGanjoor("hafez", "ghazal");
     const list = await getPoems(htmlPage);
     saveAnalyticsEvent(ctx, "ghazal");
     showPage(list, ctx, 0, "editMessage", "ghazal");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_ghete/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_ghete/, async (ctx: any) => {
     const htmlPage = await fetchHtmlPageFromGanjoor("hafez", "ghete");
     const list = await getPoems(htmlPage);
     saveAnalyticsEvent(ctx, "ghete");
@@ -232,7 +232,7 @@ const addHafezFaCallbacks = () => {
     showPage(list, ctx, 0, "editMessage", "ghete");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_robaee2/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_robaee2/, async (ctx: any) => {
     const htmlPage = await fetchHtmlPageFromGanjoor("hafez", "robaee2");
     const list = await getPoems(htmlPage);
     saveAnalyticsEvent(ctx, "hafez_robaee2");
@@ -240,7 +240,7 @@ const addHafezFaCallbacks = () => {
     showPage(list, ctx, 0, "editMessage", "robaee2");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_ghaside/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_ghaside/, async (ctx: any) => {
     const htmlPage = await fetchHtmlPageFromGanjoor("hafez", "ghaside");
     const list = await getPoems(htmlPage);
     saveAnalyticsEvent(ctx, "hafez_ghaside");
@@ -248,14 +248,14 @@ const addHafezFaCallbacks = () => {
     showPage(list, ctx, 0, "editMessage", "ghaside");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_masnavi/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_masnavi/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "hafez_masnavi");
     const htmlPage = await fetchHtmlPageFromGanjoor("hafez", "masnavi");
     const poem = await extractPoemsText(htmlPage);
     showPoem(ctx, poem, "hafez/masnavi");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_saghiname/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_saghiname/, async (ctx: any) => {
     const htmlPage = await fetchHtmlPageFromGanjoor("hafez", "saghiname");
     const poem = await extractPoemsText(htmlPage);
     saveAnalyticsEvent(ctx, "saghiname");
@@ -263,24 +263,24 @@ const addHafezFaCallbacks = () => {
     showPoem(ctx, poem, "hafez/saghiname");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_bio:fa/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_bio:fa/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "hafez_bio");
     showHafezBio(ctx);
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_get_fal/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_get_fal/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "hafez_get_fal");
 
     selectAndRenderRandomGhazal(ctx);
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_poems:fa/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_poems:fa/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "hafez_poems:fa");
 
     return createHafez(ctx, "editMessage");
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/back:fa/, async (ctx) => {
+  PersianPoemsTelegramBot.bot?.callbackQuery(/back:fa/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "back:fa");
 
     return createHafezMenuFa(ctx, "editMessage");
@@ -288,17 +288,17 @@ const addHafezFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /hafez_main_menu_back_fa/,
-    async (ctx) => {
+    async (ctx: any) => {
       saveAnalyticsEvent(ctx, "hafez_main_menu_back_fa");
 
       console.log(ctx);
-      return createLanguageMenu(ctx);
+      return createPoetListFa(ctx);
     }
   );
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /go-back-to-hafez-list/,
-    async (ctx) => {
+    async (ctx: any) => {
       saveAnalyticsEvent(ctx, "go-back-to-hafez-list");
 
       console.log(ctx);
