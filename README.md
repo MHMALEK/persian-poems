@@ -1,0 +1,98 @@
+# Persian Poems Telegram Bot
+
+A Telegram bot that serves **Persian poetry** (حافظ، خیام، مولانا) in Farsi. Poem text is loaded from [Ganjoor](https://ganjoor.net) (HTML fetch + Cheerio). The stack is **TypeScript**, **grammY**, **MongoDB** (Mongoose), **Express** (webhook mode), and **Docker**.
+
+## Requirements
+
+- **Node.js** ≥ 20  
+- **MongoDB** (e.g. Atlas) — database name is fixed to `persian-poems` in code  
+- A **Telegram bot token** from [@BotFather](https://t.me/BotFather)
+
+## Environment variables
+
+Copy `.env.example` to `.env` and fill in values. The important variables:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TELEGRAM_BOT_TOKEN` | Yes (recommended) | Bot API token. Legacy: `TELEGRAM_BOT_API_TOKEN_DEV` / `TELEGRAM_BOT_API_TOKEN_PROD` with `NODE_ENV`. |
+| `MONGODB_URL` | Yes | MongoDB connection string. Alias: `MANGO_DB_URL`. |
+| `WEBHOOK_URL` | Yes in webhook mode | Public **HTTPS** URL Telegram will POST to (path optional — defaults to `/telegram/webhook` if the URL has no path). |
+| `TELEGRAM_WEBHOOK_SECRET` | No | If set, must match Telegram `secret_token`; sent as `X-Telegram-Bot-Api-Secret-Token`. |
+| `WEBHOOK_PATH` | No | Used only when `WEBHOOK_URL` has no path; default `/telegram/webhook`. |
+| `PORT` | No | HTTP server port (default `3000`). |
+| `BOT_TRANSPORT` | No | `polling` or `webhook`. Default: **polling** in development, **webhook** when `NODE_ENV=production`. |
+| `SENTRY_DSN` | No | Enables Sentry in non-development environments. |
+
+## Local development
+
+```bash
+npm install
+cp .env.example .env   # then edit .env
+npm start              # long polling — no HTTPS or WEBHOOK_URL needed
+```
+
+Commands:
+
+- `/start` — main menu (choose poet)  
+- `/poem` / `/fal` — random Hafez ghazal (Farsi)
+
+### Try webhooks locally (ngrok)
+
+1. Set `WEBHOOK_URL` to your ngrok HTTPS URL (with or without path; see `.env.example`).  
+2. Run `ngrok http 3000` (or match `PORT`).  
+3. Run `npm run start:webhook`.  
+4. Health check: `GET /health` → `ok`.
+
+To go back to polling, delete the webhook then use `npm start`:
+
+```bash
+curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/deleteWebhook"
+```
+
+## Production build
+
+```bash
+npm run build
+npm run start:prod    # expects compiled output + env (often webhook + WEBHOOK_URL)
+```
+
+Telegram requires **HTTPS** on supported ports (e.g. **443**). Put **Caddy**, **nginx**, or **Cloudflare Tunnel** in front of the app and set `WEBHOOK_URL` to the public URL that reaches this service (same path the app registers).
+
+## Docker
+
+```bash
+docker build -t persian-poems:local .
+docker run --rm -p 3000:3000 \
+  -e TELEGRAM_BOT_TOKEN="..." \
+  -e MONGODB_URL="..." \
+  -e WEBHOOK_URL="https://your.domain/telegram/webhook" \
+  persian-poems:local
+```
+
+The image sets `NODE_ENV=production` and `BOT_TRANSPORT=webhook` by default. For a quick local test without a public URL, override with `-e BOT_TRANSPORT=polling`.
+
+`docker compose` is available via `docker-compose.yml` (pass the same variables).
+
+## CI/CD (GitHub Actions)
+
+| Workflow | When | What it does |
+|----------|------|----------------|
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Pull requests to `main` / `master` | `npm ci` + `npm run build` |
+| [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Push to `main` / `master`, or **Run workflow** | Build & push image to **GHCR**, then **SSH** deploy to your VM |
+
+### Deploy secrets (repository → **Settings → Secrets and variables → Actions**)
+
+Required for `deploy.yml`:
+
+- `VM_HOST`, `VM_USER`, `VM_SSH_KEY`  
+- `TELEGRAM_BOT_TOKEN`  
+- `WEBHOOK_URL`  
+- `MONGODB_URL` **or** `DATABASE_URL` (Mongo URI)
+
+Optional: `TELEGRAM_WEBHOOK_SECRET`
+
+After the first successful publish, open **GitHub → Packages → this container image → Package settings** and set visibility to **Public** so the VM can `docker pull` without logging in to GHCR (same pattern as a typical small VPS deploy).
+
+## License
+
+ISC
