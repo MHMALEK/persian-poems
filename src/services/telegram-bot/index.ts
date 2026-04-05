@@ -5,49 +5,58 @@ import { Menu } from "@grammyjs/menu";
 import * as dotenv from "dotenv";
 dotenv.config();
 
+function resolveBotToken(): string {
+  const single = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  if (single) return single;
+  if (process.env.NODE_ENV === "development") {
+    const dev = process.env.TELEGRAM_BOT_API_TOKEN_DEV?.trim();
+    if (dev) return dev;
+  }
+  const prod = process.env.TELEGRAM_BOT_API_TOKEN_PROD?.trim();
+  if (prod) return prod;
+  throw new Error(
+    "Set TELEGRAM_BOT_TOKEN (recommended) or TELEGRAM_BOT_API_TOKEN_DEV / TELEGRAM_BOT_API_TOKEN_PROD"
+  );
+}
+
 class TelegramBot extends TelegramBotMenu {
-  bot: Bot | undefined = undefined;
-  token: string | undefined;
+  bot: Bot;
+  readonly token: string;
 
-  constructor(private botToken?: string) {
+  constructor() {
     super();
-    if (botToken) {
-      this.token = this.botToken;
-    }
-    if (process.env.NODE_ENV === "development") {
-      this.token = process.env.TELEGRAM_BOT_API_TOKEN_DEV;
-    } else {
-      this.token = process.env.TELEGRAM_BOT_API_TOKEN_PROD;
-    }
-    this.create();
+    this.token = resolveBotToken();
+    this.bot = new Bot(this.token);
   }
 
-  create() {
-    this.bot = new Bot(this.token as string);
+  async startPolling(): Promise<void> {
+    await this.bot.start();
+    console.log("Bot running (long polling)");
   }
 
-  start() {
-    this.bot?.start();
+  async stop(): Promise<void> {
+    await this.bot.stop();
   }
 
-  stop() {
-    this.bot?.stop();
-  }
   getInstance() {
     return this.bot;
   }
+
   sendMessage() {}
 
-  addOnEventHandler(event: any, callBack: (ctx: Context) => void) {
-    this.bot?.on(event, callBack);
+  addOnEventHandler(event: string, callBack: (ctx: Context) => void) {
+    this.bot.on(event as never, callBack);
   }
 
-  addCommandEventListener(event: any, callBack: (ctx: Context) => void) {
-    this.bot?.command(event, callBack);
+  addCommandEventListener(event: string, callBack: (ctx: Context) => void) {
+    this.bot.command(event, callBack);
   }
 
-  useSession(sessionInitials?: { [x: string]: any }) {
-    this.bot?.use(session<any, any>(sessionInitials));
+  useSession(sessionInitials?: Record<string, unknown>) {
+    const seed = sessionInitials ?? {};
+    this.bot.use(
+      session({ initial: () => ({ ...seed }) }) as never
+    );
   }
 
   addMenu({
@@ -59,26 +68,18 @@ class TelegramBot extends TelegramBotMenu {
     commandName: string;
     menuTitle: string;
   }) {
-    // Make it interactive.
-    this.bot?.use(menu);
+    this.bot.use(menu);
 
     const onMenuCommandCallBack = async (ctx: Context) => {
-      // Send the menu.
       await ctx.reply(menuTitle, { reply_markup: menu });
     };
 
-    this.bot?.command(commandName, onMenuCommandCallBack);
+    this.bot.command(commandName, onMenuCommandCallBack);
   }
 
-  setLanguage = (ctx: Context & SessionFlavor<any>, lang: "en" | "fa") => {
+  setLanguage = (ctx: Context & SessionFlavor<Record<string, unknown>>, lang: "en" | "fa") => {
     ctx.session.langauge = lang;
   };
-
-  private onBotStart() {
-    this.addCommandEventListener("start", (ctx) =>
-      ctx.reply("Welcome! Up and running.")
-    );
-  }
 }
 
 const PersianPoemsTelegramBot = new TelegramBot();

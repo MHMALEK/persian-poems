@@ -1,13 +1,8 @@
 import mongoose from "mongoose";
 
-const connectToDB = (url: string) => {
-  mongoose
-    .connect(url, { dbName: "persian-poems" })
-    .then(() => console.log("Successfully connected to the database"))
-    .catch((error: any) => {
-      console.log("Could not connect to the database. Exiting now...", error);
-      process.exit();
-    });
+const connectToDB = async (url: string): Promise<void> => {
+  await mongoose.connect(url, { dbName: "persian-poems" });
+  console.log("Successfully connected to the database");
 };
 
 export default connectToDB;
