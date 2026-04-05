@@ -159,11 +159,11 @@ const addkhayamFaCallbacks = () => {
   // callbacks
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /khayam_page:(.+)/,
-    async (ctx: { match: string[]; callbackQuery: { data: string; }; }) => {
-      const pageNum = parseInt(ctx.match[1]);
+    async (ctx: Context) => {
+      const pageNum = parseInt(String(ctx.match![1]));
       saveAnalyticsEvent(ctx, `khayam_page:${pageNum}`);
 
-      const type = ctx.callbackQuery.data.split(":")[2];
+      const type = ctx.callbackQuery!.data!.split(":")[2];
       const htmlPage = await fetchHtmlPageFromGanjoor("khayyam", "robaee");
       const list = await getPoems(htmlPage);
 
@@ -173,9 +173,9 @@ const addkhayamFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /khayam_poems_select_fa:(.+)/,
-    async (ctx: { match: string[]; }) => {
-      const itemLink = ctx.match[1]; // Extract link from callback data
-      const type = ctx.match[1].split("/khayyam/")[1];
+    async (ctx: Context) => {
+      const itemLink = String(ctx.match![1]);
+      const type = itemLink.split("/khayyam/")[1];
       saveAnalyticsEvent(ctx, `khayam_poems_select_fa:${type}`);
 
       const htmlPage = await fetchHtmlPageFromGanjoor("khayyam", type);
