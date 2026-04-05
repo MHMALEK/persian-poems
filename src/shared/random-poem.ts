@@ -49,6 +49,35 @@ function buildPoemKeyboard(link: string) {
     .text("بازگشت", RANDOM_POEM_BACK_CALLBACK);
 }
 
+function backOnlyKeyboard() {
+  return new InlineKeyboard().text("بازگشت", RANDOM_POEM_BACK_CALLBACK);
+}
+
+/** Replace the menu message with the poem; extra chunks become new messages (long مولانا). */
+async function showPoemEditingMenuMessage(
+  ctx: Context,
+  chunks: string[],
+  keyboard: InlineKeyboard
+): Promise<void> {
+  if (chunks.length === 0) return;
+  const opts = { parse_mode: "HTML" as const };
+  if (chunks.length === 1) {
+    await ctx.editMessageText(chunks[0], {
+      ...opts,
+      reply_markup: keyboard,
+    });
+    return;
+  }
+  await ctx.editMessageText(chunks[0], opts);
+  for (let i = 1; i < chunks.length - 1; i++) {
+    await ctx.reply(chunks[i], opts);
+  }
+  await ctx.reply(chunks[chunks.length - 1], {
+    ...opts,
+    reply_markup: keyboard,
+  });
+}
+
 /**
  * Picks one of حافظ / خیام / مولانا at random, then a random piece from their corpus on گنجور.
  */
@@ -86,30 +115,19 @@ async function selectAndRenderRandomPoem(ctx: Context): Promise<void> {
       const poemText = await extractPoemsText(poemHtml);
       const fullText = `<b>${labelFa}</b>\n<b>${picked.title}</b>\n\n${poemText}`;
       const keyboard = buildPoemKeyboard(picked.link);
-
-      if (useChunkSplit) {
-        const chunks = splitMessage(fullText, 150);
-        for (let i = 0; i < chunks.length; i++) {
-          await ctx.reply(chunks[i], {
-            reply_markup:
-              i === chunks.length - 1 ? keyboard : undefined,
-            parse_mode: "HTML",
-          });
-        }
-      } else {
-        await ctx.reply(fullText, {
-          reply_markup: keyboard,
-          parse_mode: "HTML",
-        });
-      }
+      const chunks = useChunkSplit
+        ? splitMessage(fullText, 150)
+        : [fullText];
+      await showPoemEditingMenuMessage(ctx, chunks, keyboard);
       return;
     } catch (e) {
       console.error("random poem attempt failed", e);
     }
   }
 
-  await ctx.reply(
-    "متأسفانه دریافت شعر تصادفی با خطا مواجه شد. لطفاً دوباره تلاش کنید."
+  await ctx.editMessageText(
+    "متأسفانه دریافت شعر تصادفی با خطا مواجه شد. لطفاً دوباره تلاش کنید.",
+    { reply_markup: backOnlyKeyboard() }
   );
 }
 
