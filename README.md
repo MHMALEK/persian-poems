@@ -19,7 +19,8 @@ Copy `.env.example` to `.env` and fill in values. The important variables:
 | `WEBHOOK_URL` | Yes in webhook mode | Public **HTTPS** URL Telegram will POST to (path optional — defaults to `/telegram/webhook` if the URL has no path). |
 | `TELEGRAM_WEBHOOK_SECRET` | No | If set, must match Telegram `secret_token`; sent as `X-Telegram-Bot-Api-Secret-Token`. |
 | `WEBHOOK_PATH` | No | Used only when `WEBHOOK_URL` has no path; default `/telegram/webhook`. |
-| `PORT` | No | HTTP server port (default `3000`). |
+| `PORT` | No | Port the **Node process** listens on inside the container (default `3000`). |
+| `PUBLISH_PORT` | No | **Docker Compose only:** host port mapped to the app (default **`3002`**). GitHub deploy uses `3002` on the VM. |
 | `BOT_TRANSPORT` | No | `polling` or `webhook`. Default: **polling** in development, **webhook** when `NODE_ENV=production`. |
 | `SENTRY_DSN` | No | Enables Sentry in non-development environments. |
 
@@ -62,7 +63,8 @@ Telegram requires **HTTPS** on supported ports (e.g. **443**). Put **Caddy**, **
 
 ```bash
 docker build -t persian-poems:local .
-docker run --rm -p 3000:3000 \
+# Host:container — VM / CI deploy publishes host port 3002 → container 3000
+docker run --rm -p 3002:3000 \
   -e TELEGRAM_BOT_TOKEN="..." \
   -e MONGODB_URL="..." \
   -e WEBHOOK_URL="https://your.domain/telegram/webhook" \
@@ -71,7 +73,7 @@ docker run --rm -p 3000:3000 \
 
 The image sets `NODE_ENV=production` and `BOT_TRANSPORT=webhook` by default. For a quick local test without a public URL, override with `-e BOT_TRANSPORT=polling`.
 
-`docker compose` is available via `docker-compose.yml` (pass the same variables).
+`docker compose` maps **`PUBLISH_PORT` (default `3002`) → `3000`** inside the container. Point Caddy/nginx at **`http://127.0.0.1:3002`** on the VM.
 
 ## CI/CD (GitHub Actions)
 

@@ -6,6 +6,8 @@
 #   MONGODB_URL or DATABASE_URL (Mongo URI; app reads MONGODB_URL inside the container)
 # Optional: TELEGRAM_WEBHOOK_SECRET
 #
+# Container listens on 3000; VM maps host port 3002 → 3000 (reverse proxy to http://127.0.0.1:3002).
+#
 # After first push: GitHub → Packages → this image → Package settings → Change visibility → Public
 # so the VPS can `docker pull` without login (matches the exchange-bot setup).
 
@@ -101,7 +103,7 @@ jobs:
               -e NODE_ENV=production \
               -e BOT_TRANSPORT=webhook \
               $E \
-              -p 3000:3000 \
+              -p 3002:3000 \
               "${{ env.IMAGE_NAME }}:latest"; then
               echo "docker run failed"
               exit 1
