@@ -1,6 +1,6 @@
 import express from "express";
 import type { Bot } from "grammy";
-import { webhookCallback } from "grammy";
+import { BotError, webhookCallback } from "grammy";
 
 /**
  * Starts HTTP server and registers Telegram webhook at WEBHOOK_URL.
@@ -47,10 +47,27 @@ export async function startWebhookServer(bot: Bot): Promise<void> {
   app.get("/health", (_req, res) => res.status(200).send("ok"));
 
   app.use(express.json());
-  app.use(
-    pathname,
-    webhookCallback(bot, "express", secretToken ? { secretToken } : undefined)
+
+  const webhookHandler = webhookCallback(
+    bot,
+    "express",
+    secretToken ? { secretToken } : undefined
   );
+
+  app.use(pathname, async (req, res, next) => {
+    try {
+      await webhookHandler(req, res);
+    } catch (e: unknown) {
+      if (e instanceof BotError) {
+        await bot.errorHandler(e);
+        if (!res.headersSent) {
+          res.status(200).end();
+        }
+        return;
+      }
+      next(e);
+    }
+  });
 
   await new Promise<void>((resolve, reject) => {
     const server = app.listen(port, () => {

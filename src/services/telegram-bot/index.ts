@@ -3,6 +3,7 @@ import TelegramBotMenu from "./menu/create-menu";
 import { Menu } from "@grammyjs/menu";
 
 import * as dotenv from "dotenv";
+import { installBotErrorHandler } from "./bot-error-handler";
 dotenv.config();
 
 function resolveBotToken(): string {
@@ -27,6 +28,7 @@ class TelegramBot extends TelegramBotMenu {
     super();
     this.token = resolveBotToken();
     this.bot = new Bot(this.token);
+    installBotErrorHandler(this.bot);
   }
 
   async startPolling(): Promise<void> {
