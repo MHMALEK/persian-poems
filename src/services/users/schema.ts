@@ -18,17 +18,8 @@ const BotUserSchema = new Schema(
     username: { type: String },
     languageCode: { type: String },
     isBot: { type: Boolean, default: false },
-    /**
-     * Extensible store. Keys include `dailyDigest`: omit/`true` = receive scheduled daily poem; `false` = opt out.
-     */
+    /** Extensible store for future bot preferences. */
     preferences: { type: Schema.Types.Mixed, default: {} },
-    /** Last poem the user opened (Ganjoor path, e.g. `/hafez/ghazal/sh1`). */
-    lastReadPoem: {
-      link: { type: String },
-      title: { type: String },
-      poetLabel: { type: String },
-      updatedAt: { type: Date },
-    },
     /** Starred poems (deduped by `link` in app logic). */
     favorites: [
       {

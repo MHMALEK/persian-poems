@@ -7,7 +7,6 @@ import { createNezamiMenuFa } from "../../poets/nezami/fa";
 import { createSaadiMenuFa } from "../../poets/saadi/fa";
 import { saveAnalyticsEvent } from "../../services/analytics";
 import PersianPoemsTelegramBot from "../../services/telegram-bot";
-import { answerDigestPreferenceCallback } from "../digest-preference";
 import { buildMainKeyboard } from "../main-menu-keyboard";
 import { shouldSendMenuAsNewMessage } from "../menu-delivery";
 import { renderRandomPoemReply, selectAndRenderRandomPoem } from "../random-poem";
@@ -19,8 +18,8 @@ const MAIN_MENU_INTRO_HTML =
   "متن شعرها از <b>گنجور</b> خوانده می‌شود. زیر هر شعر می‌توانید همان صفحه را در وب باز کنید، با ستاره در «علاقه‌مندی‌ها» ذخیره کنید و با دکمه‌های پایین شعر بین بخش‌ها جابه‌جا شوید.\n\n" +
   "• <b>شاعران</b> — فهرست آثار هر شاعر\n" +
   "• <b>یک شعر تصادفی</b> — از چند شاعر در یک مجموعه\n" +
-  "• <b>علاقه‌مندی‌ها / آخرین شعری که خوانده‌اید</b> — بعد از ثبت با /start در حساب شما نگه داشته می‌شود\n" +
-  "• <b>شعر روزانهٔ خودکار</b> — اگر سرور فعال باشد، روزی یک شعر می‌فرستد؛ با دکمه‌های <b>روشن / خاموش</b> پایین منو یا دستورات /digest_on و /digest_off کنترل کنید\n\n" +
+  "• <b>علاقه‌مندی‌ها</b> — بعد از ثبت با /start در حساب شما نگه داشته می‌شود\n" +
+  "• <b>شعر روزانهٔ خودکار</b> — اگر سرور فعال باشد، روزی یک شعر برای شما فرستاده می‌شود\n\n" +
   "یک شاعر را انتخاب کنید:";
 
 /** First screen after /start — new message with poet list */
@@ -104,26 +103,6 @@ const addSelectPoetCallbacks = () => {
     }
   );
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(
-    /^digest_disable_fa$/,
-    async (ctx: Context) => {
-      await answerDigestPreferenceCallback(ctx, false, "digest_disable_fa");
-    }
-  );
-
-  PersianPoemsTelegramBot.bot?.callbackQuery(
-    /^digest_pref_on_fa$/,
-    async (ctx: Context) => {
-      await answerDigestPreferenceCallback(ctx, true);
-    }
-  );
-
-  PersianPoemsTelegramBot.bot?.callbackQuery(
-    /^digest_pref_off_fa$/,
-    async (ctx: Context) => {
-      await answerDigestPreferenceCallback(ctx, false);
-    }
-  );
 };
 
 export {

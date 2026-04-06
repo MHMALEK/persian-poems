@@ -10,7 +10,7 @@ import {
 import { sendPoemChunksToChat } from "../shared/send-poem-message";
 
 const INTRO_HTML =
-  "🌅 <b>شعر روزانه</b>\nیک شعر تصادفی از شاعران گنجور برای شما.\n\n<i>دیگر نمی‌خواهید دریافت کنید؟ زیر شعر دکمهٔ «🔕 توقف شعر روزانه» را بزنید، یا از منوی اصلی «خاموش» کنید، یا /digest_off بفرستید.</i>";
+  "🌅 <b>شعر روزانه</b>\nیک شعر تصادفی از شاعران گنجور برای شما.";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,10 +26,7 @@ async function sendDigestToUser(
     undefined,
     poem,
     RANDOM_POEM_BACK_CALLBACK,
-    {
-      actorUserId: telegramId,
-      digestOptOutButton: true,
-    }
+    { actorUserId: telegramId }
   );
   await bot.api.sendMessage(telegramId, INTRO_HTML, { parse_mode: "HTML" });
   await sendPoemChunksToChat(bot, telegramId, chunks, keyboard);
@@ -37,7 +34,7 @@ async function sendDigestToUser(
 
 /**
  * Picks one random poem (from the full poet pool) and sends it to every user
- * who has not opted out (`preferences.dailyDigest !== false`).
+ * who has used /start (all rows in `bot_users`).
  */
 async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
   const picked = await pickRandomPoemFromPool();
@@ -47,11 +44,7 @@ async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
   }
 
   const { chunks, poem } = picked;
-  const users = await BotUser.find({
-    "preferences.dailyDigest": { $ne: false },
-  })
-    .select("telegramId")
-    .lean();
+  const users = await BotUser.find({}).select("telegramId").lean();
 
   let ok = 0;
   let failed = 0;

@@ -16,8 +16,7 @@ function isPoemKeyboardMessage(msg: {
       if (
         cd.startsWith("pft:") ||
         cd.startsWith("pnv:") ||
-        cd === "random_poem_more_fa" ||
-        cd === "digest_disable_fa"
+        cd === "random_poem_more_fa"
       ) {
         return true;
       }

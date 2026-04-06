@@ -20,14 +20,7 @@ function buildMainKeyboard(): InlineKeyboard {
     keyboard.text(poet.title, `select_poet_fa:${poet.id}`).row();
   });
   keyboard.text("یک شعر تصادفی برایم بیاور", "random_poem_fa").row();
-  keyboard
-    .text("علاقه‌مندی‌ها", "fav_list_fa")
-    .text("آخرین شعری که خوانده‌اید", "last_read_fa")
-    .row();
-  keyboard
-    .text("🔔 شعر روزانه: روشن", "digest_pref_on_fa")
-    .text("🔕 شعر روزانه: خاموش", "digest_pref_off_fa")
-    .row();
+  keyboard.text("علاقه‌مندی‌ها", "fav_list_fa").row();
   return keyboard;
 }
 

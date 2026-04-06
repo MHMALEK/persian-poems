@@ -5,7 +5,6 @@ import PersianPoemsTelegramBot from "../services/telegram-bot";
 import {
   addFavorite,
   getFavoriteBySubdocId,
-  getLastReadPoem,
   isFavorite,
   listFavorites,
   removeFavoriteByLink,
@@ -41,40 +40,6 @@ async function openFavoritesList(ctx: Context): Promise<void> {
   }
   kb.text("بازگشت", BACK_MAIN);
   await ctx.reply("علاقه‌مندی‌های شما:", { reply_markup: kb });
-}
-
-async function openLastReadPoem(ctx: Context): Promise<void> {
-  const uid = ctx.from?.id;
-  if (uid === undefined) return;
-
-  const last = await getLastReadPoem(uid);
-  if (!last?.link) {
-    await ctx.reply("هنوز شعری را باز نکرده‌اید.", {
-      reply_markup: buildMainKeyboard(),
-    });
-    return;
-  }
-
-  try {
-    const body = await loadPoemBodyByGanjoorLink(last.link);
-    const title = last.title || derivePoemTitle(body);
-    const fullText = `<b>${last.poetLabel || "—"}</b>\n<b>${title}</b>\n\n${body}`;
-    const author = authorFromGanjoorPath(last.link);
-    const useChunk =
-      author === "moulavi" ? true : fullText.length > 3500;
-    const chunks = useChunk ? splitMessage(fullText, 150) : [fullText];
-    const keyboard = await buildPoemActionKeyboard(
-      ctx,
-      { link: last.link, title, poetLabel: last.poetLabel || "—" },
-      BACK_MAIN
-    );
-    await replyPoemChunks(ctx, chunks, keyboard);
-  } catch (e) {
-    console.error("openLastReadPoem failed", e);
-    await ctx.reply("دریافت آخرین شعر با خطا مواجه شد.", {
-      reply_markup: buildMainKeyboard(),
-    });
-  }
 }
 
 function addPoemFeatureCallbacks(): void {
@@ -153,11 +118,6 @@ function addPoemFeatureCallbacks(): void {
     }
   });
 
-  PersianPoemsTelegramBot.bot?.callbackQuery(/^last_read_fa$/, async (ctx) => {
-    await ctx.answerCallbackQuery();
-    saveAnalyticsEvent(ctx, "last_read_fa");
-    await openLastReadPoem(ctx);
-  });
 }
 
-export { addPoemFeatureCallbacks, openFavoritesList, openLastReadPoem };
+export { addPoemFeatureCallbacks, openFavoritesList };

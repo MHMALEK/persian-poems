@@ -1,7 +1,7 @@
 import { Context, InlineKeyboard } from "grammy";
 import { createPoemNavToken } from "../services/poem-nav-tokens";
 import { createPoemToken } from "../services/poem-tokens";
-import { isFavorite, type PoemRef, setLastReadPoem } from "../services/users/poems";
+import { isFavorite, type PoemRef } from "../services/users/poems";
 
 export type PoemListNav = {
   author: string;
@@ -19,8 +19,6 @@ export type BuildPoemKeyboardOptions = {
   poolActions?: boolean;
   /** برای ارسال زمان‌بندی‌شده بدون ctx معمولی. */
   actorUserId?: number;
-  /** فقط روی پیام شعر روزانهٔ خودکار: دکمهٔ توقف ارسال. */
-  digestOptOutButton?: boolean;
 };
 
 async function buildPoemActionKeyboard(
@@ -33,7 +31,6 @@ async function buildPoemActionKeyboard(
   let favorited = false;
   if (tid) {
     favorited = await isFavorite(tid, poem.link);
-    await setLastReadPoem(tid, poem);
   }
 
   const token = await createPoemToken({
@@ -76,10 +73,6 @@ async function buildPoemActionKeyboard(
 
   if (options?.poolActions) {
     kb.text("یک شعر تصادفی دیگر", "random_poem_more_fa").row();
-  }
-
-  if (options?.digestOptOutButton) {
-    kb.text("🔕 توقف شعر روزانه", "digest_disable_fa").row();
   }
 
   kb.text("بازگشت", backCallbackData);

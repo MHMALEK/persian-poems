@@ -12,28 +12,6 @@ export type PoemRef = {
 
 const MAX_FAVORITES = 80;
 
-async function setLastReadPoem(
-  telegramId: number,
-  poem: PoemRef
-): Promise<void> {
-  try {
-    await BotUser.findOneAndUpdate(
-      { telegramId },
-      {
-        $set: {
-          lastReadPoem: {
-            ...poem,
-            updatedAt: new Date(),
-          },
-        },
-      },
-      { upsert: false }
-    );
-  } catch (e) {
-    console.error("setLastReadPoem failed", e);
-  }
-}
-
 async function isFavorite(telegramId: number, link: string): Promise<boolean> {
   const u = await BotUser.findOne({
     telegramId,
@@ -107,21 +85,6 @@ async function removeFavoriteById(
   }
 }
 
-async function getLastReadPoem(
-  telegramId: number
-): Promise<PoemRef | null> {
-  const u = await BotUser.findOne({ telegramId })
-    .select({ lastReadPoem: 1 })
-    .lean();
-  const lr = u?.lastReadPoem;
-  if (!lr?.link) return null;
-  return {
-    link: lr.link,
-    title: lr.title ?? "",
-    poetLabel: lr.poetLabel ?? "",
-  };
-}
-
 type FavoriteRow = PoemRef & { _id: mongoose.Types.ObjectId };
 
 async function listFavorites(
@@ -171,11 +134,9 @@ async function getFavoriteBySubdocId(
 export {
   addFavorite,
   getFavoriteBySubdocId,
-  getLastReadPoem,
   isFavorite,
   listFavorites,
   MAX_FAVORITES,
   removeFavoriteById,
   removeFavoriteByLink,
-  setLastReadPoem,
 };

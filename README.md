@@ -21,12 +21,11 @@ Browse by author; each poet has a Farsi menu with bios where applicable and poem
 
 - **Random poem** — picks from several poets and corpora (حافظ، خیام، مولانا، سعدی، فردوسی، نظامی) with long-text splitting where needed.
 
-Optional **scheduled daily broadcast** (same random poem for all opted-in users, Asia/Tehran) is controlled with `DAILY_DIGEST_*` env vars; users can opt out with `/digest_off` / `/digest_on`.
+Optional **scheduled daily broadcast** (same random poem for all users who have used `/start`, Asia/Tehran) is controlled with `DAILY_DIGEST_*` env vars.
 
-### Favorites & last read
+### Favorites
 
 - **⭐ Favorite** — save a poem (Ganjoor path + title) to the user profile; list and reopen from the menu.
-- **Last read** — reopen the most recently opened poem.
 
 Requires MongoDB; user document is created on `/start` (recommended before using favorites).
 
@@ -37,15 +36,12 @@ Requires MongoDB; user document is created on `/start` (recommended before using
 | `/start` | Main menu (poets + shortcuts) |
 | `/poem` | Random **Hafez** ghazal |
 | `/fal` | Same as `/poem` (فال-style) |
-| `/digest_off` / `/digest_on` | Opt out / opt in to scheduled daily poem (if enabled server-side) |
 | `/favorites` | List starred poems |
-| `/last` | Open last-read poem |
 
 ### Main menu shortcuts (buttons)
 
 - One **random** poem (multi-poet pool)
 - **علاقه‌مندی‌ها** — favorites
-- **آخرین شعری که خوانده‌اید** — last read
 
 Each poem view includes a link to the same text on **ganjoor.net** and a back button.
 
@@ -88,7 +84,7 @@ cp .env.example .env   # then edit .env
 npm start              # long polling — no HTTPS or WEBHOOK_URL needed
 ```
 
-Use `/start` to open the menu; try `/favorites` and `/last` after `/start` so your user exists in MongoDB for favorites and last-read.
+Use `/start` to open the menu; try `/favorites` after `/start` so your user exists in MongoDB for favorites.
 
 ### Try webhooks locally (ngrok)
 

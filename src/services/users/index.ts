@@ -30,15 +30,4 @@ async function upsertUserOnStart(ctx: Context): Promise<void> {
   }
 }
 
-async function setDailyDigestPreference(
-  telegramId: number,
-  enabled: boolean
-): Promise<{ matched: boolean }> {
-  const r = await BotUser.updateOne(
-    { telegramId },
-    { $set: { "preferences.dailyDigest": enabled } }
-  );
-  return { matched: r.matchedCount > 0 };
-}
-
-export { BotUser, setDailyDigestPreference, upsertUserOnStart };
+export { BotUser, upsertUserOnStart };
