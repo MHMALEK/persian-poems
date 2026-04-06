@@ -12,12 +12,19 @@ import { buildMainKeyboard } from "../main-menu-keyboard";
 import { renderRandomPoemReply, selectAndRenderRandomPoem } from "../random-poem";
 import { replyPoemChunks } from "../send-poem-message";
 
+/** Shared intro for /start and «منوی اصلی» (HTML). */
+const MAIN_MENU_INTRO_HTML =
+  "<b>به ربات شعر فارسی خوش آمدید.</b>\n\n" +
+  "متن شعرها از <b>گنجور</b> خوانده می‌شود. زیر هر شعر می‌توانید همان صفحه را در وب باز کنید، با ستاره در «علاقه‌مندی‌ها» ذخیره کنید و با دکمه‌های پایین شعر بین بخش‌ها جابه‌جا شوید.\n\n" +
+  "• <b>شاعران</b> — فهرست آثار هر شاعر\n" +
+  "• <b>یک شعر تصادفی</b> — از چند شاعر در یک مجموعه\n" +
+  "• <b>علاقه‌مندی‌ها / آخرین شعری که خوانده‌اید</b> — بعد از ثبت با /start در حساب شما نگه داشته می‌شود\n" +
+  "• <b>شعر روزانهٔ خودکار</b> — اگر سرور فعال باشد، روزی یک شعر می‌فرستد؛ با دکمهٔ «قطع / وصل» پایین منو یا دستورات /digest_off و /digest_on کنترل کنید\n\n" +
+  "یک شاعر را انتخاب کنید:";
+
 /** First screen after /start — new message with poet list */
 const showMainMenu = (ctx: Context) => {
-  const text =
-    "به ربات تلگرام شعر فارسی خوش آمدید. شاعر مورد نظر را انتخاب کنید.\n\nبرای قطع یا وصل ارسال خودکار شعر روزانه، دکمهٔ پایین منو را بزنید (یا /digest_off و /digest_on).";
-
-  return ctx.reply(text, {
+  return ctx.reply(MAIN_MENU_INTRO_HTML, {
     reply_markup: buildMainKeyboard(),
     parse_mode: "HTML",
   });
@@ -25,8 +32,9 @@ const showMainMenu = (ctx: Context) => {
 
 /** Return to poet list from an edited inline message */
 const createPoetListFa = async (ctx: Context) => {
-  return ctx.editMessageText("لطفا شاعر مورد نظر خود را انتخاب نمایید.", {
+  return ctx.editMessageText(MAIN_MENU_INTRO_HTML, {
     reply_markup: buildMainKeyboard(),
+    parse_mode: "HTML",
   });
 };
 

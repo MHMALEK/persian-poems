@@ -22,7 +22,7 @@ function buildMainKeyboard(): InlineKeyboard {
   keyboard.text("یک شعر تصادفی برایم بیاور", "random_poem_fa").row();
   keyboard
     .text("علاقه‌مندی‌ها", "fav_list_fa")
-    .text("آخرین شعر", "last_read_fa")
+    .text("آخرین شعری که خوانده‌اید", "last_read_fa")
     .row();
   keyboard.text("شعر روزانهٔ خودکار (قطع / وصل)", "digest_toggle_fa").row();
   return keyboard;
@@ -38,7 +38,9 @@ function appendMainMenuKeyboard(kb: InlineKeyboard): void {
     kb.text(poet.title, `select_poet_fa:${poet.id}`).row();
   });
   kb.text("یک شعر تصادفی برایم بیاور", "random_poem_fa").row();
-  kb.text("علاقه‌مندی‌ها", "fav_list_fa").text("آخرین شعر", "last_read_fa").row();
+  kb.text("علاقه‌مندی‌ها", "fav_list_fa")
+    .text("آخرین شعری که خوانده‌اید", "last_read_fa")
+    .row();
   kb.text("شعر روزانهٔ خودکار (قطع / وصل)", "digest_toggle_fa").row();
 }
 

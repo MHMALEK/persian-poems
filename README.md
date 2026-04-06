@@ -45,7 +45,7 @@ Requires MongoDB; user document is created on `/start` (recommended before using
 
 - One **random** poem (multi-poet pool)
 - **علاقه‌مندی‌ها** — favorites
-- **آخرین شعر** — last read
+- **آخرین شعری که خوانده‌اید** — last read
 
 Each poem view includes a link to the same text on **ganjoor.net** and a back button.
 
