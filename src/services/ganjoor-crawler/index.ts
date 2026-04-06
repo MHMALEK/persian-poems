@@ -43,4 +43,29 @@ const getPoems = async (htmlPage: any) => {
   return list;
 };
 
-export { extractPoemsText, getPoems, loadHtml, fetchHtmlPageFromGanjoor };
+/**
+ * Child section links on category index pages (e.g. شاهنامه فردوسی).
+ * Uses `td.c2 a` table rows used on many Ganjoor indices.
+ */
+const getCategoryLinks = (htmlPage: string, authorSlug: string) => {
+  const $ = cheerio.load(htmlPage);
+  const seen = new Set<string>();
+  const list: { text: string; link: string }[] = [];
+  $(`td.c2 a[href^="/${authorSlug}/"]`).each((_, el) => {
+    const href = $(el).attr("href");
+    if (!href) return;
+    const text = $(el).text().trim();
+    if (!text || seen.has(href)) return;
+    seen.add(href);
+    list.push({ text, link: href });
+  });
+  return list;
+};
+
+export {
+  extractPoemsText,
+  getCategoryLinks,
+  getPoems,
+  loadHtml,
+  fetchHtmlPageFromGanjoor,
+};
