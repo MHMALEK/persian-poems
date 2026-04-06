@@ -20,6 +20,22 @@ const BotUserSchema = new Schema(
     isBot: { type: Boolean, default: false },
     /** Extensible store for upcoming features (notifications, favorites, etc.) */
     preferences: { type: Schema.Types.Mixed, default: {} },
+    /** Last poem the user opened (Ganjoor path, e.g. `/hafez/ghazal/sh1`). */
+    lastReadPoem: {
+      link: { type: String },
+      title: { type: String },
+      poetLabel: { type: String },
+      updatedAt: { type: Date },
+    },
+    /** Starred poems (deduped by `link` in app logic). */
+    favorites: [
+      {
+        link: { type: String, required: true },
+        title: { type: String, required: true },
+        poetLabel: { type: String, default: "" },
+        addedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true, collection: "bot_users" }
 );
