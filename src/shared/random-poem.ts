@@ -3,10 +3,7 @@ import type { PoemRef } from "../services/users/poems";
 import { POET_POOL } from "./poet-pool";
 import { fetchPoemFromIndexWithPicker } from "./poet-fetch";
 import { buildPoemActionKeyboard } from "./poem-display";
-import {
-  appendMainMenuKeyboard,
-  MAIN_MENU_BACK_CALLBACK,
-} from "./main-menu-keyboard";
+import { buildMainKeyboard, MAIN_MENU_BACK_CALLBACK } from "./main-menu-keyboard";
 import { normalizeTelegramChunks, splitMessage } from "../utils/splitter";
 import { replyPoemChunks } from "./send-poem-message";
 
@@ -77,17 +74,13 @@ async function selectAndRenderRandomPoem(ctx: Context): Promise<void> {
     return;
   }
 
-  const backOnlyKeyboard = new InlineKeyboard().text(
-    "بازگشت",
-    RANDOM_POEM_BACK_CALLBACK
-  );
-  appendMainMenuKeyboard(backOnlyKeyboard);
   const err =
     "متأسفانه دریافت شعر تصادفی با خطا مواجه شد. لطفاً دوباره تلاش کنید.";
+  const errKb = buildMainKeyboard();
   if (ctx.callbackQuery) {
-    await ctx.editMessageText(err, { reply_markup: backOnlyKeyboard });
+    await ctx.editMessageText(err, { reply_markup: errKb });
   } else {
-    await ctx.reply(err, { reply_markup: backOnlyKeyboard });
+    await ctx.reply(err, { reply_markup: errKb });
   }
 }
 

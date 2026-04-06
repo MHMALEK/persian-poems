@@ -8,6 +8,7 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
+import { poemAwareMenuMode } from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
@@ -453,9 +454,10 @@ const addmoulaviFaCallbacks = () => {
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /moulavi_poems:fa/,
     async (ctx) => {
+      await ctx.answerCallbackQuery();
       saveAnalyticsEvent(ctx, "moulavi_poems:fa");
 
-      return createMoulavi(ctx, "editMessage");
+      return createMoulavi(ctx, poemAwareMenuMode(ctx));
     }
   );
 

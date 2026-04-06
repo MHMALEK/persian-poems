@@ -8,6 +8,7 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
+import { poemAwareMenuMode } from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
@@ -333,8 +334,9 @@ const addFerdousiFaCallbacks = () => {
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/ferdousi_poems:fa/, async (ctx) => {
+    await ctx.answerCallbackQuery();
     saveAnalyticsEvent(ctx, "ferdousi_poems:fa");
-    return createFerdousi(ctx, "editMessage");
+    return createFerdousi(ctx, poemAwareMenuMode(ctx));
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(

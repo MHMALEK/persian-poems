@@ -7,6 +7,7 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
+import { poemAwareMenuMode } from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
@@ -217,8 +218,9 @@ const addNezamiFaCallbacks = () => {
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/nezami_poems:fa/, async (ctx) => {
+    await ctx.answerCallbackQuery();
     saveAnalyticsEvent(ctx, "nezami_poems:fa");
-    return createNezami(ctx, "editMessage");
+    return createNezami(ctx, poemAwareMenuMode(ctx));
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(

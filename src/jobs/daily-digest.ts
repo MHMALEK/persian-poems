@@ -10,7 +10,7 @@ import {
 import { sendPoemChunksToChat } from "../shared/send-poem-message";
 
 const INTRO_HTML =
-  "🌅 <b>شعر روزانه</b>\nیک شعر تصادفی از شاعران گنجور برای شما.\n\n<i>نمی‌خواهید دیگر دریافت کنید؟ دکمهٔ «توقف» زیر شعر، یا دستور /digest_off</i>";
+  "🌅 <b>شعر روزانه</b>\nیک شعر تصادفی از شاعران گنجور برای شما.\n\n<i>دیگر نمی‌خواهید دریافت کنید؟ زیر شعر دکمهٔ «🔕 توقف شعر روزانه» را بزنید، یا از منوی اصلی «خاموش» کنید، یا /digest_off بفرستید.</i>";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -27,7 +27,6 @@ async function sendDigestToUser(
     poem,
     RANDOM_POEM_BACK_CALLBACK,
     {
-      poolActions: true,
       actorUserId: telegramId,
       digestOptOutButton: true,
     }

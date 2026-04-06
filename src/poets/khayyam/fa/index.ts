@@ -8,6 +8,7 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
+import { poemAwareMenuMode } from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
@@ -232,9 +233,10 @@ const addkhayamFaCallbacks = () => {
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_poems:fa/, async (ctx: any) => {
+    await ctx.answerCallbackQuery();
     saveAnalyticsEvent(ctx, "khayam_poems:fa");
 
-    return createKhayam(ctx, "editMessage");
+    return createKhayam(ctx, poemAwareMenuMode(ctx));
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/back:fa/, async (ctx: any) => {

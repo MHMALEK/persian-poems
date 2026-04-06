@@ -2,10 +2,6 @@ import { Context, InlineKeyboard } from "grammy";
 import { createPoemNavToken } from "../services/poem-nav-tokens";
 import { createPoemToken } from "../services/poem-tokens";
 import { isFavorite, type PoemRef, setLastReadPoem } from "../services/users/poems";
-import {
-  appendMainMenuKeyboard,
-  MAIN_MENU_BACK_CALLBACK,
-} from "./main-menu-keyboard";
 
 export type PoemListNav = {
   author: string;
@@ -17,19 +13,14 @@ export type PoemListNav = {
 };
 
 export type BuildPoemKeyboardOptions = {
-  /** ◀ / ▶ within the same Ganjoor list (requires listLength > 1). */
+  /** ◀ / ▶ در همان فهرست گنجور (فقط وقتی بیش از یک شعر در فهرست است). */
   listNav?: PoemListNav | null;
-  /** Extra row: another random poem (pool flows); back label becomes «منوی اصلی». */
+  /** جریان شعر تصادفی از استخر: یک ردیف «یک شعر تصادفی دیگر». */
   poolActions?: boolean;
-  /** When sending outside a normal update (e.g. scheduled job), set the recipient’s Telegram user id. */
+  /** برای ارسال زمان‌بندی‌شده بدون ctx معمولی. */
   actorUserId?: number;
-  /** Scheduled daily digest: show one-tap opt-out before the back row. */
+  /** فقط روی پیام شعر روزانهٔ خودکار: دکمهٔ توقف ارسال. */
   digestOptOutButton?: boolean;
-  /**
-   * Append full main-menu navigation under poem actions (default: true).
-   * Set false only if the keyboard must stay short.
-   */
-  mainMenuNav?: boolean;
 };
 
 async function buildPoemActionKeyboard(
@@ -91,22 +82,7 @@ async function buildPoemActionKeyboard(
     kb.text("🔕 توقف شعر روزانه", "digest_disable_fa").row();
   }
 
-  const mainMenuNav = options?.mainMenuNav !== false;
-  const skipPoolMainBack =
-    mainMenuNav &&
-    options?.poolActions &&
-    backCallbackData === MAIN_MENU_BACK_CALLBACK;
-
-  if (!skipPoolMainBack) {
-    kb.row().text(
-      options?.poolActions ? "منوی اصلی" : "بازگشت",
-      backCallbackData
-    );
-  }
-
-  if (mainMenuNav) {
-    appendMainMenuKeyboard(kb);
-  }
+  kb.text("بازگشت", backCallbackData);
 
   return kb;
 }

@@ -7,8 +7,9 @@ import { createNezamiMenuFa } from "../../poets/nezami/fa";
 import { createSaadiMenuFa } from "../../poets/saadi/fa";
 import { saveAnalyticsEvent } from "../../services/analytics";
 import PersianPoemsTelegramBot from "../../services/telegram-bot";
-import { BotUser, setDailyDigestPreference } from "../../services/users";
+import { answerDigestPreferenceCallback } from "../digest-preference";
 import { buildMainKeyboard } from "../main-menu-keyboard";
+import { shouldSendMenuAsNewMessage } from "../menu-delivery";
 import { renderRandomPoemReply, selectAndRenderRandomPoem } from "../random-poem";
 import { replyPoemChunks } from "../send-poem-message";
 
@@ -19,7 +20,7 @@ const MAIN_MENU_INTRO_HTML =
   "• <b>شاعران</b> — فهرست آثار هر شاعر\n" +
   "• <b>یک شعر تصادفی</b> — از چند شاعر در یک مجموعه\n" +
   "• <b>علاقه‌مندی‌ها / آخرین شعری که خوانده‌اید</b> — بعد از ثبت با /start در حساب شما نگه داشته می‌شود\n" +
-  "• <b>شعر روزانهٔ خودکار</b> — اگر سرور فعال باشد، روزی یک شعر می‌فرستد؛ با دکمهٔ «قطع / وصل» پایین منو یا دستورات /digest_off و /digest_on کنترل کنید\n\n" +
+  "• <b>شعر روزانهٔ خودکار</b> — اگر سرور فعال باشد، روزی یک شعر می‌فرستد؛ با دکمه‌های <b>روشن / خاموش</b> پایین منو یا دستورات /digest_on و /digest_off کنترل کنید\n\n" +
   "یک شاعر را انتخاب کنید:";
 
 /** First screen after /start — new message with poet list */
@@ -30,12 +31,16 @@ const showMainMenu = (ctx: Context) => {
   });
 };
 
-/** Return to poet list from an edited inline message */
+/** Return to main poet list — new message if the callback was on a poem (keeps poem text). */
 const createPoetListFa = async (ctx: Context) => {
-  return ctx.editMessageText(MAIN_MENU_INTRO_HTML, {
+  const opts = {
     reply_markup: buildMainKeyboard(),
-    parse_mode: "HTML",
-  });
+    parse_mode: "HTML" as const,
+  };
+  if (shouldSendMenuAsNewMessage(ctx)) {
+    return ctx.reply(MAIN_MENU_INTRO_HTML, opts);
+  }
+  return ctx.editMessageText(MAIN_MENU_INTRO_HTML, opts);
 };
 
 const addSelectPoetCallbacks = () => {
@@ -102,41 +107,21 @@ const addSelectPoetCallbacks = () => {
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /^digest_disable_fa$/,
     async (ctx: Context) => {
-      await ctx.answerCallbackQuery({
-        text: "ارسال شعر روزانه خاموش شد. با /digest_on دوباره فعال کنید.",
-      });
-      saveAnalyticsEvent(ctx, "digest_disable_fa");
-      const from = ctx.from;
-      if (!from) return;
-      await setDailyDigestPreference(from.id, false);
+      await answerDigestPreferenceCallback(ctx, false, "digest_disable_fa");
     }
   );
 
   PersianPoemsTelegramBot.bot?.callbackQuery(
-    /^digest_toggle_fa$/,
+    /^digest_pref_on_fa$/,
     async (ctx: Context) => {
-      const from = ctx.from;
-      if (!from) return;
+      await answerDigestPreferenceCallback(ctx, true);
+    }
+  );
 
-      const u = await BotUser.findOne({ telegramId: from.id }).lean();
-      if (!u) {
-        await ctx.answerCallbackQuery({
-          text: "ابتدا /start را بزنید تا در ربات ثبت شوید.",
-        });
-        return;
-      }
-
-      const enabled =
-        (u.preferences as { dailyDigest?: boolean } | undefined)
-          ?.dailyDigest !== false;
-      const next = !enabled;
-      await setDailyDigestPreference(from.id, next);
-      saveAnalyticsEvent(ctx, "digest_toggle_fa");
-      await ctx.answerCallbackQuery({
-        text: next
-          ? "ارسال خودکار شعر روزانه برای شما فعال شد."
-          : "ارسال خودکار شعر روزانه خاموش شد.",
-      });
+  PersianPoemsTelegramBot.bot?.callbackQuery(
+    /^digest_pref_off_fa$/,
+    async (ctx: Context) => {
+      await answerDigestPreferenceCallback(ctx, false);
     }
   );
 };

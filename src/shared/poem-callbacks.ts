@@ -14,10 +14,7 @@ import { authorFromGanjoorPath } from "./ganjoor-path";
 import { loadPoemBodyByGanjoorLink } from "./load-ganjoor-poem";
 import { buildPoemActionKeyboard } from "./poem-display";
 import { derivePoemTitle } from "./poem-titles";
-import {
-  appendMainMenuKeyboard,
-  buildMainKeyboard,
-} from "./main-menu-keyboard";
+import { buildMainKeyboard } from "./main-menu-keyboard";
 import { replyPoemChunks } from "./send-poem-message";
 import { splitMessage } from "../utils/splitter";
 
@@ -43,7 +40,6 @@ async function openFavoritesList(ctx: Context): Promise<void> {
     kb.text(label, `fo:${String(f._id)}`).row();
   }
   kb.text("بازگشت", BACK_MAIN);
-  appendMainMenuKeyboard(kb);
   await ctx.reply("علاقه‌مندی‌های شما:", { reply_markup: kb });
 }
 
@@ -70,8 +66,7 @@ async function openLastReadPoem(ctx: Context): Promise<void> {
     const keyboard = await buildPoemActionKeyboard(
       ctx,
       { link: last.link, title, poetLabel: last.poetLabel || "—" },
-      BACK_MAIN,
-      { poolActions: true }
+      BACK_MAIN
     );
     await replyPoemChunks(ctx, chunks, keyboard);
   } catch (e) {
@@ -147,8 +142,7 @@ function addPoemFeatureCallbacks(): void {
       const keyboard = await buildPoemActionKeyboard(
         ctx,
         { link: fav.link, title, poetLabel: fav.poetLabel || "—" },
-        BACK_MAIN,
-        { poolActions: true }
+        BACK_MAIN
       );
       await replyPoemChunks(ctx, chunks, keyboard);
     } catch (e) {

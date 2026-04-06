@@ -1,7 +1,12 @@
 import { selectAndRenderRandomGhazal } from "../poets/hafez/fa";
 import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
-import { setDailyDigestPreference, upsertUserOnStart } from "../services/users";
+import {
+  BotUser,
+  setDailyDigestPreference,
+  upsertUserOnStart,
+} from "../services/users";
+import { readDigestEnabled } from "../shared/digest-preference";
 import {
   openFavoritesList,
   openLastReadPoem,
@@ -38,27 +43,43 @@ const addDefaultCommands = () => {
   PersianPoemsTelegramBot.addCommandEventListener("digest_off", async (ctx) => {
     const from = ctx.from;
     if (!from) return;
-    saveAnalyticsEvent(ctx, "digest_off");
-    const { matched } = await setDailyDigestPreference(from.id, false);
-    if (!matched) {
+    const u = await BotUser.findOne({ telegramId: from.id }).lean();
+    if (!u) {
       await ctx.reply("ابتدا /start را بزنید تا در ربات ثبت شوید.");
       return;
     }
+    if (!readDigestEnabled(u.preferences)) {
+      await ctx.reply(
+        "الان هم ارسال خودکار شعر روزانه برای شما خاموش است."
+      );
+      return;
+    }
+    await setDailyDigestPreference(from.id, false);
+    saveAnalyticsEvent(ctx, "digest_off");
     await ctx.reply(
-      "ارسال خودکار شعر روزانه خاموش شد. با /digest_on دوباره فعال کنید."
+      "✅ ارسال خودکار شعر روزانه متوقف شد. با دکمهٔ «روشن» در منو یا /digest_on می‌توانید دوباره فعال کنید."
     );
   });
 
   PersianPoemsTelegramBot.addCommandEventListener("digest_on", async (ctx) => {
     const from = ctx.from;
     if (!from) return;
-    saveAnalyticsEvent(ctx, "digest_on");
-    const { matched } = await setDailyDigestPreference(from.id, true);
-    if (!matched) {
+    const u = await BotUser.findOne({ telegramId: from.id }).lean();
+    if (!u) {
       await ctx.reply("ابتدا /start را بزنید تا در ربات ثبت شوید.");
       return;
     }
-    await ctx.reply("ارسال خودکار شعر روزانه برای شما فعال شد.");
+    if (readDigestEnabled(u.preferences)) {
+      await ctx.reply(
+        "الان هم ارسال خودکار شعر روزانه برای شما روشن است."
+      );
+      return;
+    }
+    await setDailyDigestPreference(from.id, true);
+    saveAnalyticsEvent(ctx, "digest_on");
+    await ctx.reply(
+      "✅ از این پس در صورت فعال بودن سرور، شعر روزانه برای شما فرستاده می‌شود."
+    );
   });
 };
 
