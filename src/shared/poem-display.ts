@@ -2,6 +2,10 @@ import { Context, InlineKeyboard } from "grammy";
 import { createPoemNavToken } from "../services/poem-nav-tokens";
 import { createPoemToken } from "../services/poem-tokens";
 import { isFavorite, type PoemRef, setLastReadPoem } from "../services/users/poems";
+import {
+  appendMainMenuKeyboard,
+  MAIN_MENU_BACK_CALLBACK,
+} from "./main-menu-keyboard";
 
 export type PoemListNav = {
   author: string;
@@ -15,12 +19,17 @@ export type PoemListNav = {
 export type BuildPoemKeyboardOptions = {
   /** ◀ / ▶ within the same Ganjoor list (requires listLength > 1). */
   listNav?: PoemListNav | null;
-  /** Extra row: another random / daily poem (pool flows); back label becomes «منوی اصلی». */
+  /** Extra row: another random poem (pool flows); back label becomes «منوی اصلی». */
   poolActions?: boolean;
   /** When sending outside a normal update (e.g. scheduled job), set the recipient’s Telegram user id. */
   actorUserId?: number;
   /** Scheduled daily digest: show one-tap opt-out before the back row. */
   digestOptOutButton?: boolean;
+  /**
+   * Append full main-menu navigation under poem actions (default: true).
+   * Set false only if the keyboard must stay short.
+   */
+  mainMenuNav?: boolean;
 };
 
 async function buildPoemActionKeyboard(
@@ -75,19 +84,29 @@ async function buildPoemActionKeyboard(
   }
 
   if (options?.poolActions) {
-    kb.text("یک شعر تصادفی دیگر", "random_poem_more_fa")
-      .text("شعر امروز (همین‌جا)", "daily_poem_more_fa")
-      .row();
+    kb.text("یک شعر تصادفی دیگر", "random_poem_more_fa").row();
   }
 
   if (options?.digestOptOutButton) {
     kb.text("🔕 توقف شعر روزانه", "digest_disable_fa").row();
   }
 
-  kb.text(
-    options?.poolActions ? "منوی اصلی" : "بازگشت",
-    backCallbackData
-  );
+  const mainMenuNav = options?.mainMenuNav !== false;
+  const skipPoolMainBack =
+    mainMenuNav &&
+    options?.poolActions &&
+    backCallbackData === MAIN_MENU_BACK_CALLBACK;
+
+  if (!skipPoolMainBack) {
+    kb.row().text(
+      options?.poolActions ? "منوی اصلی" : "بازگشت",
+      backCallbackData
+    );
+  }
+
+  if (mainMenuNav) {
+    appendMainMenuKeyboard(kb);
+  }
 
   return kb;
 }

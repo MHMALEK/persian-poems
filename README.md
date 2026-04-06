@@ -17,10 +17,11 @@ Browse by author; each poet has a Farsi menu with bios where applicable and poem
 | **نظامی** | پنج‌گانه (مخزن‌الاسرار، خسرو و شیرین، لیلی و مجنون، هفت‌پیکر، شرفنامه، خردنامه) |
 | **فردوسی** | شاهنامه (آغاز، فهرست بخش‌ها، پیمایش زیربخش‌ها) |
 
-### Random & daily poems
+### Random poem
 
-- **Random poem** — picks from several poets and corpora (حافظ، خیام، مولانا، سعدی، فردوسی، نظامی) with long-text splitting for مولانا where needed.
-- **Daily poem** — one poem per **calendar day** (Asia/Tehran) per user, **deterministic** (same user sees the same poem on the same day).
+- **Random poem** — picks from several poets and corpora (حافظ، خیام، مولانا، سعدی، فردوسی، نظامی) with long-text splitting where needed.
+
+Optional **scheduled daily broadcast** (same random poem for all opted-in users, Asia/Tehran) is controlled with `DAILY_DIGEST_*` env vars; users can opt out with `/digest_off` / `/digest_on`.
 
 ### Favorites & last read
 
@@ -36,14 +37,13 @@ Requires MongoDB; user document is created on `/start` (recommended before using
 | `/start` | Main menu (poets + shortcuts) |
 | `/poem` | Random **Hafez** ghazal |
 | `/fal` | Same as `/poem` (فال-style) |
-| `/daily` | Today’s **personal** daily poem |
+| `/digest_off` / `/digest_on` | Opt out / opt in to scheduled daily poem (if enabled server-side) |
 | `/favorites` | List starred poems |
 | `/last` | Open last-read poem |
 
 ### Main menu shortcuts (buttons)
 
 - One **random** poem (multi-poet pool)
-- **شعر امروز (شخصی)** — daily poem
 - **علاقه‌مندی‌ها** — favorites
 - **آخرین شعر** — last read
 
@@ -88,7 +88,7 @@ cp .env.example .env   # then edit .env
 npm start              # long polling — no HTTPS or WEBHOOK_URL needed
 ```
 
-Use `/start` to open the menu; try `/daily`, `/favorites`, and `/last` after `/start` so your user exists in MongoDB for favorites and last-read.
+Use `/start` to open the menu; try `/favorites` and `/last` after `/start` so your user exists in MongoDB for favorites and last-read.
 
 ### Try webhooks locally (ngrok)
 

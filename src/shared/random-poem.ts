@@ -3,10 +3,14 @@ import type { PoemRef } from "../services/users/poems";
 import { POET_POOL } from "./poet-pool";
 import { fetchPoemFromIndexWithPicker } from "./poet-fetch";
 import { buildPoemActionKeyboard } from "./poem-display";
+import {
+  appendMainMenuKeyboard,
+  MAIN_MENU_BACK_CALLBACK,
+} from "./main-menu-keyboard";
 import { normalizeTelegramChunks, splitMessage } from "../utils/splitter";
-import { sendOrEditPoemChunks } from "./send-poem-message";
+import { replyPoemChunks } from "./send-poem-message";
 
-const RANDOM_POEM_BACK_CALLBACK = "back_to_poet_menu_fa";
+const RANDOM_POEM_BACK_CALLBACK = MAIN_MENU_BACK_CALLBACK;
 
 /**
  * One random poem from {@link POET_POOL} (all poets). Chunks are Telegram-safe.
@@ -69,7 +73,7 @@ async function renderRandomPoemReply(
 async function selectAndRenderRandomPoem(ctx: Context): Promise<void> {
   const out = await renderRandomPoemReply(ctx);
   if (out) {
-    await sendOrEditPoemChunks(ctx, out.chunks, out.keyboard);
+    await replyPoemChunks(ctx, out.chunks, out.keyboard);
     return;
   }
 
@@ -77,6 +81,7 @@ async function selectAndRenderRandomPoem(ctx: Context): Promise<void> {
     "بازگشت",
     RANDOM_POEM_BACK_CALLBACK
   );
+  appendMainMenuKeyboard(backOnlyKeyboard);
   const err =
     "متأسفانه دریافت شعر تصادفی با خطا مواجه شد. لطفاً دوباره تلاش کنید.";
   if (ctx.callbackQuery) {

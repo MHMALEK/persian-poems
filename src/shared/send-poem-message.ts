@@ -2,53 +2,9 @@ import { Bot, Context, InlineKeyboard } from "grammy";
 import { normalizeTelegramChunks } from "../utils/splitter";
 
 /**
- * Sends poem text from an inline callback (`editMessage` + optional `reply`) or from a normal message (`reply` only).
+ * Sends poem text as **new chat messages** (always `reply`), including when the user
+ * tapped an inline button — so each chunk can be forwarded or saved separately.
  */
-async function sendOrEditPoemChunks(
-  ctx: Context,
-  chunks: string[],
-  keyboard: InlineKeyboard
-): Promise<void> {
-  chunks = normalizeTelegramChunks(chunks);
-  const opts = { parse_mode: "HTML" as const };
-  if (chunks.length === 0) return;
-
-  if (ctx.callbackQuery) {
-    if (chunks.length === 1) {
-      await ctx.editMessageText(chunks[0], {
-        ...opts,
-        reply_markup: keyboard,
-      });
-      return;
-    }
-    await ctx.editMessageText(chunks[0], opts);
-    for (let i = 1; i < chunks.length - 1; i++) {
-      await ctx.reply(chunks[i], opts);
-    }
-    await ctx.reply(chunks[chunks.length - 1], {
-      ...opts,
-      reply_markup: keyboard,
-    });
-    return;
-  }
-
-  if (chunks.length === 1) {
-    await ctx.reply(chunks[0], {
-      ...opts,
-      reply_markup: keyboard,
-    });
-    return;
-  }
-  await ctx.reply(chunks[0], opts);
-  for (let i = 1; i < chunks.length - 1; i++) {
-    await ctx.reply(chunks[i], opts);
-  }
-  await ctx.reply(chunks[chunks.length - 1], {
-    ...opts,
-    reply_markup: keyboard,
-  });
-}
-
 async function replyPoemChunks(
   ctx: Context,
   chunks: string[],
@@ -101,4 +57,4 @@ async function sendPoemChunksToChat(
   });
 }
 
-export { replyPoemChunks, sendOrEditPoemChunks, sendPoemChunksToChat };
+export { replyPoemChunks, sendPoemChunksToChat };

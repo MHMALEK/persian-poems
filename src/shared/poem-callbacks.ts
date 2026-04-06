@@ -14,6 +14,10 @@ import { authorFromGanjoorPath } from "./ganjoor-path";
 import { loadPoemBodyByGanjoorLink } from "./load-ganjoor-poem";
 import { buildPoemActionKeyboard } from "./poem-display";
 import { derivePoemTitle } from "./poem-titles";
+import {
+  appendMainMenuKeyboard,
+  buildMainKeyboard,
+} from "./main-menu-keyboard";
 import { replyPoemChunks } from "./send-poem-message";
 import { splitMessage } from "../utils/splitter";
 
@@ -26,7 +30,7 @@ async function openFavoritesList(ctx: Context): Promise<void> {
   const favs = await listFavorites(uid);
   if (!favs.length) {
     await ctx.reply("هنوز شعری را به علاقه‌مندی‌ها اضافه نکرده‌اید.", {
-      reply_markup: new InlineKeyboard().text("بازگشت", BACK_MAIN),
+      reply_markup: buildMainKeyboard(),
     });
     return;
   }
@@ -39,6 +43,7 @@ async function openFavoritesList(ctx: Context): Promise<void> {
     kb.text(label, `fo:${String(f._id)}`).row();
   }
   kb.text("بازگشت", BACK_MAIN);
+  appendMainMenuKeyboard(kb);
   await ctx.reply("علاقه‌مندی‌های شما:", { reply_markup: kb });
 }
 
@@ -49,7 +54,7 @@ async function openLastReadPoem(ctx: Context): Promise<void> {
   const last = await getLastReadPoem(uid);
   if (!last?.link) {
     await ctx.reply("هنوز شعری را باز نکرده‌اید.", {
-      reply_markup: new InlineKeyboard().text("بازگشت", BACK_MAIN),
+      reply_markup: buildMainKeyboard(),
     });
     return;
   }
@@ -71,7 +76,9 @@ async function openLastReadPoem(ctx: Context): Promise<void> {
     await replyPoemChunks(ctx, chunks, keyboard);
   } catch (e) {
     console.error("openLastReadPoem failed", e);
-    await ctx.reply("دریافت آخرین شعر با خطا مواجه شد.");
+    await ctx.reply("دریافت آخرین شعر با خطا مواجه شد.", {
+      reply_markup: buildMainKeyboard(),
+    });
   }
 }
 
@@ -123,7 +130,9 @@ function addPoemFeatureCallbacks(): void {
 
     const fav = await getFavoriteBySubdocId(uid, subId);
     if (!fav) {
-      await ctx.reply("این مورد دیگر در علاقه‌مندی‌ها نیست.");
+      await ctx.reply("این مورد دیگر در علاقه‌مندی‌ها نیست.", {
+        reply_markup: buildMainKeyboard(),
+      });
       return;
     }
 
@@ -144,7 +153,9 @@ function addPoemFeatureCallbacks(): void {
       await replyPoemChunks(ctx, chunks, keyboard);
     } catch (e) {
       console.error("fav_open failed", e);
-      await ctx.reply("دریافت این شعر با خطا مواجه شد.");
+      await ctx.reply("دریافت این شعر با خطا مواجه شد.", {
+        reply_markup: buildMainKeyboard(),
+      });
     }
   });
 

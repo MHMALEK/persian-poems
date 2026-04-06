@@ -6,7 +6,6 @@ import {
   openFavoritesList,
   openLastReadPoem,
 } from "../shared/poem-callbacks";
-import { selectAndRenderDailyPoem } from "../shared/daily-poem";
 import { showMainMenu } from "../shared/commands";
 
 const addDefaultCommands = () => {
@@ -24,11 +23,6 @@ const addDefaultCommands = () => {
   PersianPoemsTelegramBot.addCommandEventListener("fal", async (ctx) => {
     saveAnalyticsEvent(ctx, "fal");
     await selectAndRenderRandomGhazal(ctx);
-  });
-
-  PersianPoemsTelegramBot.addCommandEventListener("daily", async (ctx) => {
-    saveAnalyticsEvent(ctx, "daily_command");
-    await selectAndRenderDailyPoem(ctx);
   });
 
   PersianPoemsTelegramBot.addCommandEventListener("favorites", async (ctx) => {
