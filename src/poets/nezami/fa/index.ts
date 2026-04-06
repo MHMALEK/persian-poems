@@ -7,7 +7,11 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { buildPoemActionKeyboard } from "../../../shared/poem-display";
+import {
+  buildPoemActionKeyboard,
+  type PoemListNav,
+} from "../../../shared/poem-display";
+import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
 
 const config = {
@@ -40,13 +44,15 @@ const showPoem = async (
   ctx: Context,
   text: string,
   link: string,
-  title?: string
+  title?: string,
+  listNav?: PoemListNav | null
 ) => {
   const resolvedTitle = title ?? derivePoemTitle(text);
   const keyboard = await buildPoemActionKeyboard(
     ctx,
     { link, title: resolvedTitle, poetLabel: "نظامی" },
-    "nezami_poems:fa"
+    "nezami_poems:fa",
+    listNav ? { listNav } : undefined
   );
   await ctx.reply(text, {
     reply_markup: keyboard,
@@ -171,7 +177,28 @@ const addNezamiFaCallbacks = () => {
 
       const htmlPage = await fetchHtmlPageFromGanjoor("nezami", type);
       const poemText = await extractPoemsText(htmlPage);
-      await showPoem(ctx, poemText, itemLink);
+
+      const indexPath = ganjoorIndexPathFromPoemLink("nezami", itemLink);
+      let listNav: PoemListNav | undefined;
+      let poemTitle: string | undefined;
+      if (indexPath) {
+        const listPage = await fetchHtmlPageFromGanjoor("nezami", indexPath);
+        const list = await getPoems(listPage);
+        const listIndex = list.findIndex((x: { link: string }) => x.link === itemLink);
+        if (listIndex !== -1 && list.length > 1) {
+          poemTitle = list[listIndex]?.text;
+          listNav = {
+            author: "nezami",
+            indexPath,
+            listIndex,
+            listLength: list.length,
+            backCallback: "nezami_poems:fa",
+            poetLabel: "نظامی",
+          };
+        }
+      }
+
+      await showPoem(ctx, poemText, itemLink, poemTitle, listNav);
     }
   );
 

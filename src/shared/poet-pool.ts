@@ -43,7 +43,8 @@ const POET_POOL: PoetPoolEntry[] = [
       "shahname/kkhosro",
       "shahname/qmars",
     ],
-    useChunkSplit: false,
+    /** Shahname sections can exceed Telegram's 4096-char limit; line-split then char-split. */
+    useChunkSplit: true,
   },
   {
     author: "nezami",

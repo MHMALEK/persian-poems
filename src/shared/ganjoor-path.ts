@@ -16,4 +16,26 @@ function authorFromGanjoorPath(link: string): string | null {
   return rest.slice(0, slash);
 }
 
-export { authorFromGanjoorPath, pathAfterAuthor };
+/**
+ * Path to the listing page (e.g. `ghazal` or `shams/ghazalsh`) for a poem item link.
+ * Returns `null` when the link has no parent segment (single-page work).
+ */
+function ganjoorIndexPathFromPoemLink(
+  author: string,
+  itemLink: string
+): string | null {
+  const needle = `/${author}/`;
+  const i = itemLink.indexOf(needle);
+  if (i === -1) return null;
+  const rest = itemLink.slice(i + needle.length);
+  const segments = rest.split("/").filter(Boolean);
+  if (segments.length < 2) return null;
+  return segments.slice(0, -1).join("/");
+}
+
+export {
+  authorFromGanjoorPath,
+  ganjoorIndexPathFromPoemLink,
+  pathAfterAuthor,
+};
+

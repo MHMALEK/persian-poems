@@ -1,6 +1,62 @@
 # Persian Poems Telegram Bot
 
-A Telegram bot that serves **Persian poetry** (حافظ، خیام، مولانا) in Farsi. Poem text is loaded from [Ganjoor](https://ganjoor.net) (HTML fetch + Cheerio). The stack is **TypeScript**, **grammY**, **MongoDB** (Mongoose), **Express** (webhook mode), and **Docker**.
+A Telegram bot that serves **Persian poetry** in Farsi. Poem text is loaded from [Ganjoor](https://ganjoor.net) (HTML fetch + Cheerio). The stack is **TypeScript**, **grammY**, **MongoDB** (Mongoose), **Express** (webhook mode), and **Docker**.
+
+## Features
+
+### Poets (inline menu)
+
+Browse by author; each poet has a Farsi menu with bios where applicable and poem lists from Ganjoor:
+
+| Poet | Highlights |
+|------|------------|
+| **حافظ** | غزلیات، رباعیات، قطعات، قصاید، مثنوی، ساقی‌نامه، فال حافظ |
+| **خیام** | رباعیات |
+| **مولانا** | شمس (غزلیات، مستدرکات، ترجیعات، رباعیات)، مثنوی (۶ دفتر) |
+| **سعدی** | غزلیات، رباعیات، قطعات (دیوان) |
+| **نظامی** | پنج‌گانه (مخزن‌الاسرار، خسرو و شیرین، لیلی و مجنون، هفت‌پیکر، شرفنامه، خردنامه) |
+| **فردوسی** | شاهنامه (آغاز، فهرست بخش‌ها، پیمایش زیربخش‌ها) |
+
+### Random & daily poems
+
+- **Random poem** — picks from several poets and corpora (حافظ، خیام، مولانا، سعدی، فردوسی، نظامی) with long-text splitting for مولانا where needed.
+- **Daily poem** — one poem per **calendar day** (Asia/Tehran) per user, **deterministic** (same user sees the same poem on the same day).
+
+### Favorites & last read
+
+- **⭐ Favorite** — save a poem (Ganjoor path + title) to the user profile; list and reopen from the menu.
+- **Last read** — reopen the most recently opened poem.
+
+Requires MongoDB; user document is created on `/start` (recommended before using favorites).
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Main menu (poets + shortcuts) |
+| `/poem` | Random **Hafez** ghazal |
+| `/fal` | Same as `/poem` (فال-style) |
+| `/daily` | Today’s **personal** daily poem |
+| `/favorites` | List starred poems |
+| `/last` | Open last-read poem |
+
+### Main menu shortcuts (buttons)
+
+- One **random** poem (multi-poet pool)
+- **شعر امروز (شخصی)** — daily poem
+- **علاقه‌مندی‌ها** — favorites
+- **آخرین شعر** — last read
+
+Each poem view includes a link to the same text on **ganjoor.net** and a back button.
+
+### Analytics
+
+Usage events are appended to the **`analytics_events`** collection (`event` name, `telegramId`, optional profile fields, `chatType`, timestamps). Writes are **non-blocking** so handlers stay fast.
+
+### Tech notes
+
+- **Pagination** on long poem lists (inline keyboard).
+- **Callback tokens** (`poem_tokens`) for favorite buttons stay within Telegram’s `callback_data` size limits (short TTL in MongoDB).
 
 ## Requirements
 
@@ -32,10 +88,7 @@ cp .env.example .env   # then edit .env
 npm start              # long polling — no HTTPS or WEBHOOK_URL needed
 ```
 
-Commands:
-
-- `/start` — main menu (choose poet)  
-- `/poem` / `/fal` — random Hafez ghazal (Farsi)
+Use `/start` to open the menu; try `/daily`, `/favorites`, and `/last` after `/start` so your user exists in MongoDB for favorites and last-read.
 
 ### Try webhooks locally (ngrok)
 
@@ -78,7 +131,7 @@ The image sets `NODE_ENV=production` and `BOT_TRANSPORT=webhook` by default. For
 ## CI/CD (GitHub Actions)
 
 | Workflow | When | What it does |
-|----------|------|----------------|
+|----------|------|--------------|
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Pull requests to `main` / `master` | `npm ci` + `npm run build` |
 | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Push to `main` / `master`, or **Run workflow** | Build & push image to **GHCR**, then **SSH** deploy to your VM |
 

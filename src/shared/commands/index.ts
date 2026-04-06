@@ -7,8 +7,10 @@ import { createNezamiMenuFa } from "../../poets/nezami/fa";
 import { createSaadiMenuFa } from "../../poets/saadi/fa";
 import { saveAnalyticsEvent } from "../../services/analytics";
 import PersianPoemsTelegramBot from "../../services/telegram-bot";
-import { selectAndRenderDailyPoem } from "../daily-poem";
-import { selectAndRenderRandomPoem } from "../random-poem";
+import { setDailyDigestPreference } from "../../services/users";
+import { renderDailyPoemReply, selectAndRenderDailyPoem } from "../daily-poem";
+import { renderRandomPoemReply, selectAndRenderRandomPoem } from "../random-poem";
+import { replyPoemChunks } from "../send-poem-message";
 
 const poets: {
   [x: string]: {
@@ -59,7 +61,7 @@ function buildMainKeyboard(): InlineKeyboard {
 /** First screen after /start — new message with poet list */
 const showMainMenu = (ctx: Context) => {
   const text =
-    "به ربات تلگرام شعر فارسی خوش آمدید. شاعر مورد نظر را انتخاب کنید.";
+    "به ربات تلگرام شعر فارسی خوش آمدید. شاعر مورد نظر را انتخاب کنید.\n\nاگر ارسال خودکار شعر روزانه را نمی‌خواهید: /digest_off — برای روشن کردن دوباره: /digest_on";
 
   return ctx.reply(text, {
     reply_markup: buildMainKeyboard(),
@@ -124,6 +126,51 @@ const addSelectPoetCallbacks = () => {
       saveAnalyticsEvent(ctx, "daily_poem_fa");
       await ctx.answerCallbackQuery();
       await selectAndRenderDailyPoem(ctx);
+    }
+  );
+
+  PersianPoemsTelegramBot.bot?.callbackQuery(
+    /^random_poem_more_fa$/,
+    async (ctx: Context) => {
+      await ctx.answerCallbackQuery();
+      saveAnalyticsEvent(ctx, "random_poem_more_fa");
+      const out = await renderRandomPoemReply(ctx);
+      if (out) {
+        await replyPoemChunks(ctx, out.chunks, out.keyboard);
+      } else {
+        await ctx.reply(
+          "متأسفانه دریافت شعر تصادفی با خطا مواجه شد. لطفاً دوباره تلاش کنید."
+        );
+      }
+    }
+  );
+
+  PersianPoemsTelegramBot.bot?.callbackQuery(
+    /^daily_poem_more_fa$/,
+    async (ctx: Context) => {
+      await ctx.answerCallbackQuery();
+      saveAnalyticsEvent(ctx, "daily_poem_more_fa");
+      const out = await renderDailyPoemReply(ctx);
+      if (out) {
+        await replyPoemChunks(ctx, out.chunks, out.keyboard);
+      } else {
+        await ctx.reply(
+          "متأسفانه دریافت شعر روز با خطا مواجه شد. لطفاً بعداً دوباره تلاش کنید."
+        );
+      }
+    }
+  );
+
+  PersianPoemsTelegramBot.bot?.callbackQuery(
+    /^digest_disable_fa$/,
+    async (ctx: Context) => {
+      await ctx.answerCallbackQuery({
+        text: "ارسال شعر روزانه خاموش شد. با /digest_on دوباره فعال کنید.",
+      });
+      saveAnalyticsEvent(ctx, "digest_disable_fa");
+      const from = ctx.from;
+      if (!from) return;
+      await setDailyDigestPreference(from.id, false);
     }
   );
 };

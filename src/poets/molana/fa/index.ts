@@ -8,9 +8,13 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { buildPoemActionKeyboard } from "../../../shared/poem-display";
+import {
+  buildPoemActionKeyboard,
+  type PoemListNav,
+} from "../../../shared/poem-display";
+import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
-import { splitMessage } from "../../../utils/splitter";
+import { normalizeTelegramChunks, splitMessage } from "../../../utils/splitter";
 const config = {
   pagination: {
     itemPerPage: 10,
@@ -38,15 +42,17 @@ const showPoem = async (
   ctx: Context,
   text: string,
   link: string,
-  title?: string
+  title?: string,
+  listNav?: PoemListNav | null
 ) => {
   const resolvedTitle = title ?? derivePoemTitle(text);
   const maxChunkLines = 150;
-  const chunks = splitMessage(text, maxChunkLines);
+  const chunks = normalizeTelegramChunks(splitMessage(text, maxChunkLines));
   const keyboard = await buildPoemActionKeyboard(
     ctx,
     { link, title: resolvedTitle, poetLabel: "مولانا" },
-    "moulavi_poems:fa"
+    "moulavi_poems:fa",
+    listNav ? { listNav } : undefined
   );
 
   for (let i = 0; i < chunks.length; i++) {
@@ -252,14 +258,34 @@ const addmoulaviFaCallbacks = () => {
   PersianPoemsTelegramBot.bot?.callbackQuery(
     /moulavi_poems_select_fa:(.+)/,
     async (ctx) => {
-      const itemLink = ctx.match[1]; // Extract link from callback data
+      const itemLink = ctx.match[1];
       const type = ctx.match[1].split("/moulavi/")[1];
       saveAnalyticsEvent(ctx, `moulavi_poems_select_fa:${type}`);
 
       const htmlPage = await fetchHtmlPageFromGanjoor("moulavi", type);
-
       const poemText = await extractPoemsText(htmlPage);
-      await showPoem(ctx, poemText, itemLink);
+
+      const indexPath = ganjoorIndexPathFromPoemLink("moulavi", itemLink);
+      let listNav: PoemListNav | undefined;
+      let poemTitle: string | undefined;
+      if (indexPath) {
+        const listPage = await fetchHtmlPageFromGanjoor("moulavi", indexPath);
+        const list = await getPoems(listPage);
+        const listIndex = list.findIndex((x: { link: string }) => x.link === itemLink);
+        if (listIndex !== -1 && list.length > 1) {
+          poemTitle = list[listIndex]?.text;
+          listNav = {
+            author: "moulavi",
+            indexPath,
+            listIndex,
+            listLength: list.length,
+            backCallback: "moulavi_poems:fa",
+            poetLabel: "مولانا",
+          };
+        }
+      }
+
+      await showPoem(ctx, poemText, itemLink, poemTitle, listNav);
     }
   );
 

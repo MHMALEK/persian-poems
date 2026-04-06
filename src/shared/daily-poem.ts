@@ -41,7 +41,6 @@ function mulberry32(seed: number) {
   };
 }
 
-/** Stable poem index for a day; independent of retry/network so the same poem is chosen. */
 function stableIndexFromSeed(seedStr: string, modulo: number): number {
   if (modulo <= 0) return 0;
   let h = 2166136261;
@@ -53,13 +52,13 @@ function stableIndexFromSeed(seedStr: string, modulo: number): number {
 }
 
 /**
- * One poem per calendar day (Asia/Tehran), stable for each Telegram user.
+ * Same deterministic poem as `/daily`, for sending as **new** messages (e.g. «شعر امروز» again).
  */
-async function selectAndRenderDailyPoem(ctx: Context): Promise<void> {
+async function renderDailyPoemReply(
+  ctx: Context
+): Promise<{ chunks: string[]; keyboard: InlineKeyboard } | null> {
   const uid = ctx.from?.id;
-  if (uid === undefined) return;
-
-  saveAnalyticsEvent(ctx, "daily_poem");
+  if (uid === undefined) return null;
 
   const dayKey = tehranDateKey();
   const rng = mulberry32(seedFromDayAndUser(dayKey, uid));
@@ -67,10 +66,10 @@ async function selectAndRenderDailyPoem(ctx: Context): Promise<void> {
 
   const pi = pick(POET_POOL.length);
   const entry = POET_POOL[pi];
-  if (!entry) return;
+  if (!entry) return null;
   const ip = pick(entry.indexPaths.length);
   const indexPath = entry.indexPaths[ip];
-  if (!indexPath) return;
+  if (!indexPath) return null;
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -98,16 +97,30 @@ async function selectAndRenderDailyPoem(ctx: Context): Promise<void> {
       const keyboard = await buildPoemActionKeyboard(
         ctx,
         poem,
-        RANDOM_POEM_BACK_CALLBACK
+        RANDOM_POEM_BACK_CALLBACK,
+        { poolActions: true }
       );
       const chunks = entry.useChunkSplit
         ? splitMessage(fullText, 150)
         : [fullText];
-      await sendOrEditPoemChunks(ctx, chunks, keyboard);
-      return;
+      return { chunks, keyboard };
     } catch (e) {
       console.error("daily poem attempt failed", e);
     }
+  }
+  return null;
+}
+
+async function selectAndRenderDailyPoem(ctx: Context): Promise<void> {
+  const uid = ctx.from?.id;
+  if (uid === undefined) return;
+
+  saveAnalyticsEvent(ctx, "daily_poem");
+
+  const out = await renderDailyPoemReply(ctx);
+  if (out) {
+    await sendOrEditPoemChunks(ctx, out.chunks, out.keyboard);
+    return;
   }
 
   const backKb = new InlineKeyboard().text(
@@ -123,4 +136,4 @@ async function selectAndRenderDailyPoem(ctx: Context): Promise<void> {
   }
 }
 
-export { selectAndRenderDailyPoem, tehranDateKey };
+export { renderDailyPoemReply, selectAndRenderDailyPoem, tehranDateKey };

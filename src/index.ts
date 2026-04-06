@@ -9,7 +9,9 @@ import { addSaadiFaCallbacks } from "./poets/saadi/fa";
 import { addNezamiFaCallbacks } from "./poets/nezami/fa";
 import { addFerdousiFaCallbacks } from "./poets/ferdousi/fa";
 import { addPoemFeatureCallbacks } from "./shared/poem-callbacks";
+import { addPoemNavCallbacks } from "./shared/poem-nav-callbacks";
 import { startWebhookServer } from "./http/webhook-server";
+import { scheduleDailyDigest } from "./jobs/daily-digest";
 
 function resolveMongoUrl(): string {
   const url = process.env.MONGODB_URL?.trim() || process.env.MANGO_DB_URL?.trim();
@@ -31,6 +33,7 @@ async function main() {
   addDefaultCommands();
   addSelectPoetCallbacks();
   addPoemFeatureCallbacks();
+  addPoemNavCallbacks();
   addHafezFaCallbacks();
   addkhayamFaCallbacks();
   addmoulaviFaCallbacks();
@@ -44,6 +47,8 @@ async function main() {
   } else {
     await PersianPoemsTelegramBot.startPolling();
   }
+
+  scheduleDailyDigest(PersianPoemsTelegramBot.bot);
 }
 
 main().catch((err) => {

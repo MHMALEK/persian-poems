@@ -65,7 +65,8 @@ async function openLastReadPoem(ctx: Context): Promise<void> {
     const keyboard = await buildPoemActionKeyboard(
       ctx,
       { link: last.link, title, poetLabel: last.poetLabel || "—" },
-      BACK_MAIN
+      BACK_MAIN,
+      { poolActions: true }
     );
     await replyPoemChunks(ctx, chunks, keyboard);
   } catch (e) {
@@ -137,7 +138,8 @@ function addPoemFeatureCallbacks(): void {
       const keyboard = await buildPoemActionKeyboard(
         ctx,
         { link: fav.link, title, poetLabel: fav.poetLabel || "—" },
-        BACK_MAIN
+        BACK_MAIN,
+        { poolActions: true }
       );
       await replyPoemChunks(ctx, chunks, keyboard);
     } catch (e) {

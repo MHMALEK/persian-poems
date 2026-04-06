@@ -9,7 +9,11 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { buildPoemActionKeyboard } from "../../../shared/poem-display";
+import {
+  buildPoemActionKeyboard,
+  type PoemListNav,
+} from "../../../shared/poem-display";
+import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
 const config = {
   pagination: {
@@ -38,14 +42,16 @@ const showPoem = async (
   ctx: Context,
   text: string,
   link: string,
-  title?: string
+  title?: string,
+  listNav?: PoemListNav | null
 ) => {
   const plain = text.replace(/<[^>]+>/g, " ");
   const resolvedTitle = title ?? derivePoemTitle(plain);
   const keyboard = await buildPoemActionKeyboard(
     ctx,
     { link, title: resolvedTitle, poetLabel: "حافظ" },
-    "hafez_poems:fa"
+    "hafez_poems:fa",
+    listNav ? { listNav } : undefined
   );
   await ctx.reply(text, {
     reply_markup: keyboard,
@@ -219,9 +225,29 @@ const addHafezFaCallbacks = () => {
       saveAnalyticsEvent(ctx, `hafez_poems_select_fa:${type}`);
 
       const htmlPage = await fetchHtmlPageFromGanjoor("hafez", type);
-
       const poemText = await extractPoemsText(htmlPage);
-      await showPoem(ctx, poemText, itemLink);
+
+      const indexPath = ganjoorIndexPathFromPoemLink("hafez", itemLink);
+      let listNav: PoemListNav | undefined;
+      let poemTitle: string | undefined;
+      if (indexPath) {
+        const listPage = await fetchHtmlPageFromGanjoor("hafez", indexPath);
+        const list = await getPoems(listPage);
+        const listIndex = list.findIndex((x: { link: string }) => x.link === itemLink);
+        if (listIndex !== -1 && list.length > 1) {
+          poemTitle = list[listIndex]?.text;
+          listNav = {
+            author: "hafez",
+            indexPath,
+            listIndex,
+            listLength: list.length,
+            backCallback: "hafez_poems:fa",
+            poetLabel: "حافظ",
+          };
+        }
+      }
+
+      await showPoem(ctx, poemText, itemLink, poemTitle, listNav);
     }
   );
 

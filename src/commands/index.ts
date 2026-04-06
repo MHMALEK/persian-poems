@@ -1,7 +1,7 @@
 import { selectAndRenderRandomGhazal } from "../poets/hafez/fa";
 import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
-import { upsertUserOnStart } from "../services/users";
+import { setDailyDigestPreference, upsertUserOnStart } from "../services/users";
 import {
   openFavoritesList,
   openLastReadPoem,
@@ -39,6 +39,32 @@ const addDefaultCommands = () => {
   PersianPoemsTelegramBot.addCommandEventListener("last", async (ctx) => {
     saveAnalyticsEvent(ctx, "last_command");
     await openLastReadPoem(ctx);
+  });
+
+  PersianPoemsTelegramBot.addCommandEventListener("digest_off", async (ctx) => {
+    const from = ctx.from;
+    if (!from) return;
+    saveAnalyticsEvent(ctx, "digest_off");
+    const { matched } = await setDailyDigestPreference(from.id, false);
+    if (!matched) {
+      await ctx.reply("ابتدا /start را بزنید تا در ربات ثبت شوید.");
+      return;
+    }
+    await ctx.reply(
+      "ارسال خودکار شعر روزانه خاموش شد. با /digest_on دوباره فعال کنید."
+    );
+  });
+
+  PersianPoemsTelegramBot.addCommandEventListener("digest_on", async (ctx) => {
+    const from = ctx.from;
+    if (!from) return;
+    saveAnalyticsEvent(ctx, "digest_on");
+    const { matched } = await setDailyDigestPreference(from.id, true);
+    if (!matched) {
+      await ctx.reply("ابتدا /start را بزنید تا در ربات ثبت شوید.");
+      return;
+    }
+    await ctx.reply("ارسال خودکار شعر روزانه برای شما فعال شد.");
   });
 };
 
