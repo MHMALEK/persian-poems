@@ -1,21 +1,56 @@
 import { Context } from "grammy";
 import mongoose from "mongoose";
-import AnalyticsSchema from "./schema";
+import AnalyticsEventSchema from "./schema";
 
-// Model the schema
-const Analytics = mongoose.model("bot-analytics", AnalyticsSchema);
+const AnalyticsEvent =
+  mongoose.models.AnalyticsEvent ??
+  mongoose.model("AnalyticsEvent", AnalyticsEventSchema);
 
-const saveAnalytics = (userData: any) => {
-  // Create an instance of model User
-  const analytics = new Analytics(userData);
+export type AnalyticsMeta = Record<string, unknown>;
 
-  // Save the new model instance, passing a callback
-  analytics.save().then((item) => console.log(item));
-};
+function buildEventPayload(
+  ctx: Context,
+  event: string,
+  meta?: AnalyticsMeta
+): Record<string, unknown> | null {
+  const from = ctx.from;
+  if (!from) return null;
 
-const saveAnalyticsEvent = (ctx: Context, event: string) => {
-  const userData = ctx.from;
-  // saveAnalytics({ ...userData, event });
-};
+  const payload: Record<string, unknown> = {
+    telegramId: from.id,
+    event,
+    username: from.username,
+    firstName: from.first_name,
+    lastName: from.last_name,
+    languageCode: from.language_code,
+    isBot: from.is_bot ?? false,
+    chatType: ctx.chat?.type,
+  };
 
-export { saveAnalytics, saveAnalyticsEvent };
+  if (meta && Object.keys(meta).length > 0) {
+    payload.meta = meta;
+  }
+
+  return payload;
+}
+
+/**
+ * Records a single analytics event in MongoDB. Non-blocking: does not await the write
+ * so Telegram handlers stay responsive. Failures are logged only.
+ *
+ * Optional `meta` for extra dimensions (keep small; avoid PII you do not need).
+ */
+function saveAnalyticsEvent(
+  ctx: Context,
+  event: string,
+  meta?: AnalyticsMeta
+): void {
+  const doc = buildEventPayload(ctx, event, meta);
+  if (!doc) return;
+
+  void AnalyticsEvent.create(doc).catch((err) => {
+    console.error("analytics: failed to save event", event, err);
+  });
+}
+
+export { AnalyticsEvent, saveAnalyticsEvent };
