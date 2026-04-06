@@ -5,6 +5,10 @@ import { addDefaultCommands } from "./commands";
 import { addSelectPoetCallbacks } from "./shared/commands";
 import { addkhayamFaCallbacks } from "./poets/khayyam/fa";
 import { addmoulaviFaCallbacks } from "./poets/molana/fa";
+import { addSaadiFaCallbacks } from "./poets/saadi/fa";
+import { addNezamiFaCallbacks } from "./poets/nezami/fa";
+import { addFerdousiFaCallbacks } from "./poets/ferdousi/fa";
+import { addPoemFeatureCallbacks } from "./shared/poem-callbacks";
 import { startWebhookServer } from "./http/webhook-server";
 
 function resolveMongoUrl(): string {
@@ -26,9 +30,13 @@ async function main() {
 
   addDefaultCommands();
   addSelectPoetCallbacks();
+  addPoemFeatureCallbacks();
   addHafezFaCallbacks();
   addkhayamFaCallbacks();
   addmoulaviFaCallbacks();
+  addSaadiFaCallbacks();
+  addNezamiFaCallbacks();
+  addFerdousiFaCallbacks();
 
   const transport = resolveTransport();
   if (transport === "webhook") {

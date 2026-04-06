@@ -2,6 +2,11 @@ import { selectAndRenderRandomGhazal } from "../poets/hafez/fa";
 import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
 import { upsertUserOnStart } from "../services/users";
+import {
+  openFavoritesList,
+  openLastReadPoem,
+} from "../shared/poem-callbacks";
+import { selectAndRenderDailyPoem } from "../shared/daily-poem";
 import { showMainMenu } from "../shared/commands";
 
 const addDefaultCommands = () => {
@@ -11,14 +16,29 @@ const addDefaultCommands = () => {
     await showMainMenu(ctx);
   });
 
-  PersianPoemsTelegramBot.addCommandEventListener("poem", (ctx) => {
+  PersianPoemsTelegramBot.addCommandEventListener("poem", async (ctx) => {
     saveAnalyticsEvent(ctx, "poem_command");
-    selectAndRenderRandomGhazal(ctx);
+    await selectAndRenderRandomGhazal(ctx);
   });
 
-  PersianPoemsTelegramBot.addCommandEventListener("fal", (ctx) => {
+  PersianPoemsTelegramBot.addCommandEventListener("fal", async (ctx) => {
     saveAnalyticsEvent(ctx, "fal");
-    selectAndRenderRandomGhazal(ctx);
+    await selectAndRenderRandomGhazal(ctx);
+  });
+
+  PersianPoemsTelegramBot.addCommandEventListener("daily", async (ctx) => {
+    saveAnalyticsEvent(ctx, "daily_command");
+    await selectAndRenderDailyPoem(ctx);
+  });
+
+  PersianPoemsTelegramBot.addCommandEventListener("favorites", async (ctx) => {
+    saveAnalyticsEvent(ctx, "favorites_command");
+    await openFavoritesList(ctx);
+  });
+
+  PersianPoemsTelegramBot.addCommandEventListener("last", async (ctx) => {
+    saveAnalyticsEvent(ctx, "last_command");
+    await openLastReadPoem(ctx);
   });
 };
 
