@@ -14,6 +14,8 @@ import {
 } from "../../../shared/poem-display";
 import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
+import { replyPoemChunks } from "../../../shared/send-poem-message";
+import { normalizeTelegramChunks, splitMessage } from "../../../utils/splitter";
 
 const config = {
   pagination: { itemPerPage: 10 },
@@ -55,10 +57,8 @@ const showPoem = async (
     "nezami_poems:fa",
     listNav ? { listNav } : undefined
   );
-  await ctx.reply(text, {
-    reply_markup: keyboard,
-    parse_mode: "HTML",
-  });
+  const chunks = normalizeTelegramChunks(splitMessage(text, 150));
+  await replyPoemChunks(ctx, chunks, keyboard);
 };
 
 const showPage = (
