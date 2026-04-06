@@ -8,6 +8,8 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
+import { buildPoemActionKeyboard } from "../../../shared/poem-display";
+import { derivePoemTitle } from "../../../shared/poem-titles";
 const config = {
   pagination: {
     itemPerPage: 10,
@@ -31,14 +33,19 @@ const showBio = (ctx: Context) => {
   });
 };
 
-const showPoem = async (ctx: Context, text: string, link: string) => {
-  // show menu at the end of poem
-  let keyboard = new InlineKeyboard();
-  keyboard.url("مطالعه در وبسایت گنجور", `https://ganjoor.net${link}`).row();
-
-  keyboard.text("بازگشت", "khayam_poems:fa");
-
-  ctx.reply(text, {
+const showPoem = async (
+  ctx: Context,
+  text: string,
+  link: string,
+  title?: string
+) => {
+  const resolvedTitle = title ?? derivePoemTitle(text);
+  const keyboard = await buildPoemActionKeyboard(
+    ctx,
+    { link, title: resolvedTitle, poetLabel: "خیام" },
+    "khayam_poems:fa"
+  );
+  await ctx.reply(text, {
     reply_markup: keyboard,
     parse_mode: "HTML",
   });
@@ -181,7 +188,7 @@ const addkhayamFaCallbacks = () => {
       const htmlPage = await fetchHtmlPageFromGanjoor("khayyam", type);
 
       const poemText = await extractPoemsText(htmlPage);
-      showPoem(ctx, poemText, itemLink);
+      await showPoem(ctx, poemText, itemLink);
     }
   );
 

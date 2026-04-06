@@ -9,6 +9,8 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
+import { buildPoemActionKeyboard } from "../../../shared/poem-display";
+import { derivePoemTitle } from "../../../shared/poem-titles";
 const config = {
   pagination: {
     itemPerPage: 10,
@@ -32,14 +34,20 @@ const showHafezBio = (ctx: Context) => {
   });
 };
 
-const showPoem = async (ctx: Context, text: string, link: string) => {
-  // show menu at the end of poem
-  let keyboard = new InlineKeyboard();
-  keyboard.url("مطالعه در وبسایت گنجور", `https://ganjoor.net${link}`).row();
-
-  keyboard.text("بازگشت", "hafez_poems:fa");
-
-  ctx.reply(text, {
+const showPoem = async (
+  ctx: Context,
+  text: string,
+  link: string,
+  title?: string
+) => {
+  const plain = text.replace(/<[^>]+>/g, " ");
+  const resolvedTitle = title ?? derivePoemTitle(plain);
+  const keyboard = await buildPoemActionKeyboard(
+    ctx,
+    { link, title: resolvedTitle, poetLabel: "حافظ" },
+    "hafez_poems:fa"
+  );
+  await ctx.reply(text, {
     reply_markup: keyboard,
     parse_mode: "HTML",
   });
@@ -187,7 +195,7 @@ const selectAndRenderRandomGhazal = async (ctx: Context) => {
         
         `;
 
-  showPoem(ctx, text, randomGhazal.link);
+  await showPoem(ctx, text, randomGhazal.link, randomGhazal.text);
 };
 
 const addHafezFaCallbacks = () => {
@@ -213,7 +221,7 @@ const addHafezFaCallbacks = () => {
       const htmlPage = await fetchHtmlPageFromGanjoor("hafez", type);
 
       const poemText = await extractPoemsText(htmlPage);
-      showPoem(ctx, poemText, itemLink);
+      await showPoem(ctx, poemText, itemLink);
     }
   );
 
@@ -252,7 +260,7 @@ const addHafezFaCallbacks = () => {
     saveAnalyticsEvent(ctx, "hafez_masnavi");
     const htmlPage = await fetchHtmlPageFromGanjoor("hafez", "masnavi");
     const poem = await extractPoemsText(htmlPage);
-    showPoem(ctx, poem, "hafez/masnavi");
+    await showPoem(ctx, poem, "hafez/masnavi", "مثنوی");
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_saghiname/, async (ctx: any) => {
@@ -260,7 +268,7 @@ const addHafezFaCallbacks = () => {
     const poem = await extractPoemsText(htmlPage);
     saveAnalyticsEvent(ctx, "saghiname");
 
-    showPoem(ctx, poem, "hafez/saghiname");
+    await showPoem(ctx, poem, "hafez/saghiname", "ساقی نامه");
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_bio:fa/, async (ctx: any) => {

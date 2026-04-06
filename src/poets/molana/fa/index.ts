@@ -8,6 +8,8 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
+import { buildPoemActionKeyboard } from "../../../shared/poem-display";
+import { derivePoemTitle } from "../../../shared/poem-titles";
 import { splitMessage } from "../../../utils/splitter";
 const config = {
   pagination: {
@@ -32,19 +34,25 @@ const showBio = (ctx: Context) => {
   });
 };
 
-const showPoem = async (ctx: Context, text: string, link: string) => {
-  // show menu at the end of poem
-  let keyboard = new InlineKeyboard();
-  keyboard.url("مطالعه در وبسایت گنجور", `https://ganjoor.net${link}`).row();
-
-  keyboard.text("بازگشت", "moulavi_poems:fa");
-
-  let maxChunkLines = 150; // Maximum lines in a chunk
+const showPoem = async (
+  ctx: Context,
+  text: string,
+  link: string,
+  title?: string
+) => {
+  const resolvedTitle = title ?? derivePoemTitle(text);
+  const maxChunkLines = 150;
   const chunks = splitMessage(text, maxChunkLines);
+  const keyboard = await buildPoemActionKeyboard(
+    ctx,
+    { link, title: resolvedTitle, poetLabel: "مولانا" },
+    "moulavi_poems:fa"
+  );
 
   for (let i = 0; i < chunks.length; i++) {
+    const isLast = i === chunks.length - 1;
     await ctx.reply(chunks[i], {
-      reply_markup: keyboard,
+      reply_markup: isLast ? keyboard : undefined,
       parse_mode: "HTML",
     });
   }
@@ -251,7 +259,7 @@ const addmoulaviFaCallbacks = () => {
       const htmlPage = await fetchHtmlPageFromGanjoor("moulavi", type);
 
       const poemText = await extractPoemsText(htmlPage);
-      showPoem(ctx, poemText, itemLink);
+      await showPoem(ctx, poemText, itemLink);
     }
   );
 
