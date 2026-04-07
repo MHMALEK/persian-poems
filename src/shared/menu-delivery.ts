@@ -26,14 +26,14 @@ function isPoemKeyboardMessage(msg: {
  * message so poem chunks stay in the chat.
  */
 function shouldSendMenuAsNewMessage(ctx: Context): boolean {
-  const msg = ctx.callbackQuery?.message;
-  if (!msg || !("reply_markup" in msg)) return false;
-  return isPoemKeyboardMessage(msg as { reply_markup?: { inline_keyboard?: { callback_data?: string }[][] } });
+  void ctx;
+  return false;
 }
 
 /** For poets' createX(ctx, mode) helpers. */
 function poemAwareMenuMode(ctx: Context): "replyMessage" | "editMessage" {
-  return shouldSendMenuAsNewMessage(ctx) ? "replyMessage" : "editMessage";
+  void ctx;
+  return "editMessage";
 }
 
 export { isPoemKeyboardMessage, poemAwareMenuMode, shouldSendMenuAsNewMessage };

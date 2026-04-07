@@ -8,7 +8,6 @@ import { createSaadiMenuFa } from "../../poets/saadi/fa";
 import { saveAnalyticsEvent } from "../../services/analytics";
 import PersianPoemsTelegramBot from "../../services/telegram-bot";
 import { buildMainKeyboard } from "../main-menu-keyboard";
-import { shouldSendMenuAsNewMessage } from "../menu-delivery";
 import { renderRandomPoemReply, selectAndRenderRandomPoem } from "../random-poem";
 import { replyPoemChunks } from "../send-poem-message";
 
@@ -29,16 +28,12 @@ const showMainMenu = (ctx: Context) => {
   });
 };
 
-/** Return to main poet list — new message if the callback was on a poem (keeps poem text). */
+/** Return to main poet list by editing current message. */
 const createPoetListFa = async (ctx: Context) => {
-  const opts = {
+  return ctx.editMessageText(MAIN_MENU_INTRO_HTML, {
     reply_markup: buildMainKeyboard(),
     parse_mode: "HTML" as const,
-  };
-  if (shouldSendMenuAsNewMessage(ctx)) {
-    return ctx.reply(MAIN_MENU_INTRO_HTML, opts);
-  }
-  return ctx.editMessageText(MAIN_MENU_INTRO_HTML, opts);
+  });
 };
 
 const addSelectPoetCallbacks = () => {
