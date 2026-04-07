@@ -4,7 +4,11 @@ import { POET_POOL } from "./poet-pool";
 import { fetchPoemFromIndexWithPicker } from "./poet-fetch";
 import { buildPoemActionKeyboard } from "./poem-display";
 import { buildMainKeyboard, MAIN_MENU_BACK_CALLBACK } from "./main-menu-keyboard";
-import { normalizeTelegramChunks, splitMessage } from "../utils/splitter";
+import {
+  splitMessage,
+  splitTelegramText,
+  TELEGRAM_TEXT_SAFE_MAX,
+} from "../utils/splitter";
 import { replyPoemChunks } from "./send-poem-message";
 
 const RANDOM_POEM_BACK_CALLBACK = MAIN_MENU_BACK_CALLBACK;
@@ -31,11 +35,14 @@ async function pickRandomPoemFromPool(): Promise<{
       );
       if (!picked) continue;
 
-      const fullText = `<b>${entry.labelFa}</b>\n<b>${picked.title}</b>\n\n${picked.poemText}`;
-      const rawChunks = entry.useChunkSplit
-        ? splitMessage(fullText, 150)
-        : [fullText];
-      const chunks = normalizeTelegramChunks(rawChunks);
+      const header = `<b>${entry.labelFa}</b>\n<b>${picked.title}</b>\n\n`;
+      const bodyOnlyChunks = entry.useChunkSplit
+        ? splitMessage(picked.poemText, 150)
+        : [picked.poemText];
+      const maxBodyLen = Math.max(1, TELEGRAM_TEXT_SAFE_MAX - header.length);
+      const chunks = bodyOnlyChunks.flatMap((body) =>
+        splitTelegramText(body, maxBodyLen).map((part) => header + part)
+      );
       const poem: PoemRef = {
         link: picked.link,
         title: picked.title,
