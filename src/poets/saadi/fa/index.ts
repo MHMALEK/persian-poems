@@ -46,6 +46,13 @@ const showPoem = async (
     "saadi_poems:fa",
     listNav ? { listNav } : undefined
   );
+  if (ctx.callbackQuery) {
+    await ctx.editMessageText(text, {
+      reply_markup: keyboard,
+      parse_mode: "HTML",
+    });
+    return;
+  }
   await ctx.reply(text, {
     reply_markup: keyboard,
     parse_mode: "HTML",

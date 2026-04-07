@@ -56,6 +56,14 @@ const showPoem = async (
     listNav ? { listNav } : undefined
   );
 
+  if (ctx.callbackQuery && chunks.length === 1) {
+    await ctx.editMessageText(chunks[0], {
+      reply_markup: keyboard,
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
   for (let i = 0; i < chunks.length; i++) {
     const isLast = i === chunks.length - 1;
     await ctx.reply(chunks[i], {

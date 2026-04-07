@@ -58,6 +58,13 @@ const showPoem = async (
     listNav ? { listNav } : undefined
   );
   const chunks = normalizeTelegramChunks(splitMessage(text, 150));
+  if (ctx.callbackQuery && chunks.length === 1) {
+    await ctx.editMessageText(chunks[0], {
+      reply_markup: keyboard,
+      parse_mode: "HTML",
+    });
+    return;
+  }
   await replyPoemChunks(ctx, chunks, keyboard);
 };
 
