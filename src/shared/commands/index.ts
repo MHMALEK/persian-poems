@@ -87,6 +87,13 @@ const addSelectPoetCallbacks = () => {
       saveAnalyticsEvent(ctx, "random_poem_more_fa");
       const out = await renderRandomPoemReply(ctx);
       if (out) {
+        if (out.chunks.length === 1) {
+          await ctx.editMessageText(out.chunks[0], {
+            parse_mode: "HTML",
+            reply_markup: out.keyboard,
+          });
+          return;
+        }
         await replyPoemChunks(ctx, out.chunks, out.keyboard);
       } else {
         await ctx.reply(
