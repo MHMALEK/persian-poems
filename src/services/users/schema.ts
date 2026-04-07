@@ -20,15 +20,6 @@ const BotUserSchema = new Schema(
     isBot: { type: Boolean, default: false },
     /** Extensible store for future bot preferences. */
     preferences: { type: Schema.Types.Mixed, default: {} },
-    /** Starred poems (deduped by `link` in app logic). */
-    favorites: [
-      {
-        link: { type: String, required: true },
-        title: { type: String, required: true },
-        poetLabel: { type: String, default: "" },
-        addedAt: { type: Date, default: Date.now },
-      },
-    ],
   },
   { timestamps: true, collection: "bot_users" }
 );

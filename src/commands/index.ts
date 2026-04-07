@@ -2,7 +2,6 @@ import { selectAndRenderRandomGhazal } from "../poets/hafez/fa";
 import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
 import { upsertUserOnStart } from "../services/users";
-import { openFavoritesList } from "../shared/poem-callbacks";
 import { showMainMenu } from "../shared/commands";
 
 const addDefaultCommands = () => {
@@ -22,10 +21,6 @@ const addDefaultCommands = () => {
     await selectAndRenderRandomGhazal(ctx);
   });
 
-  PersianPoemsTelegramBot.addCommandEventListener("favorites", async (ctx) => {
-    saveAnalyticsEvent(ctx, "favorites_command");
-    await openFavoritesList(ctx);
-  });
 };
 
 export { addDefaultCommands };

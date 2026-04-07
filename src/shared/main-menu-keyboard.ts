@@ -1,6 +1,6 @@
 import { InlineKeyboard } from "grammy";
 
-/** Callback data used for «منوی اصلی» from pool flows (random poem, favorites, etc.). */
+/** Callback data used for «منوی اصلی» from pool flows (random poem, etc.). */
 const MAIN_MENU_BACK_CALLBACK = "back_to_poet_menu_fa";
 
 type MainMenuPoet = { title: string; id: string };
@@ -20,7 +20,6 @@ function buildMainKeyboard(): InlineKeyboard {
     keyboard.text(poet.title, `select_poet_fa:${poet.id}`).row();
   });
   keyboard.text("یک شعر تصادفی برایم بیاور", "random_poem_fa").row();
-  keyboard.text("علاقه‌مندی‌ها", "fav_list_fa").row();
   return keyboard;
 }
 

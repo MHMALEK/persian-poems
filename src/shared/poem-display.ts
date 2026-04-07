@@ -1,7 +1,6 @@
 import { Context, InlineKeyboard } from "grammy";
 import { createPoemNavToken } from "../services/poem-nav-tokens";
-import { createPoemToken } from "../services/poem-tokens";
-import { isFavorite, type PoemRef } from "../services/users/poems";
+import { type PoemRef } from "../services/users/poems";
 
 export type PoemListNav = {
   author: string;
@@ -27,27 +26,8 @@ async function buildPoemActionKeyboard(
   backCallbackData: string,
   options?: BuildPoemKeyboardOptions
 ): Promise<InlineKeyboard> {
-  const tid = options?.actorUserId ?? ctx?.from?.id;
-  let favorited = false;
-  if (tid) {
-    favorited = await isFavorite(tid, poem.link);
-  }
-
-  const token = await createPoemToken({
-    link: poem.link,
-    title: poem.title,
-    poetLabel: poem.poetLabel,
-    favorited,
-  });
-
-  const starLabel = favorited
-    ? "⭐ حذف از علاقه‌مندی‌ها"
-    : "⭐ افزودن به علاقه‌مندی‌ها";
-
   const kb = new InlineKeyboard()
     .url("مطالعه در وبسایت گنجور", `https://ganjoor.net${poem.link}`)
-    .row()
-    .text(starLabel, `pft:${token}`)
     .row();
 
   const nav = options?.listNav;

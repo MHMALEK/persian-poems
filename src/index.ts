@@ -8,7 +8,6 @@ import { addmoulaviFaCallbacks } from "./poets/molana/fa";
 import { addSaadiFaCallbacks } from "./poets/saadi/fa";
 import { addNezamiFaCallbacks } from "./poets/nezami/fa";
 import { addFerdousiFaCallbacks } from "./poets/ferdousi/fa";
-import { addPoemFeatureCallbacks } from "./shared/poem-callbacks";
 import { addPoemNavCallbacks } from "./shared/poem-nav-callbacks";
 import { startWebhookServer } from "./http/webhook-server";
 import { scheduleDailyDigest } from "./jobs/daily-digest";
@@ -32,7 +31,6 @@ async function main() {
 
   addDefaultCommands();
   addSelectPoetCallbacks();
-  addPoemFeatureCallbacks();
   addPoemNavCallbacks();
   addHafezFaCallbacks();
   addkhayamFaCallbacks();

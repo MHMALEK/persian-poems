@@ -1,4 +1,4 @@
-/** Short label for favorites when Ganjoor does not expose a separate title. */
+/** Short label for poems when Ganjoor does not expose a separate title. */
 function derivePoemTitle(poemPlainText: string): string {
   const line = poemPlainText
     .split("\n")

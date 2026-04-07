@@ -13,11 +13,7 @@ function isPoemKeyboardMessage(msg: {
     for (const btn of row) {
       const cd = btn.callback_data;
       if (typeof cd !== "string") continue;
-      if (
-        cd.startsWith("pft:") ||
-        cd.startsWith("pnv:") ||
-        cd === "random_poem_more_fa"
-      ) {
+      if (cd.startsWith("pnv:") || cd === "random_poem_more_fa") {
         return true;
       }
     }

@@ -23,12 +23,6 @@ Browse by author; each poet has a Farsi menu with bios where applicable and poem
 
 Optional **scheduled daily broadcast** (same random poem for all users who have used `/start`, Asia/Tehran) is controlled with `DAILY_DIGEST_*` env vars.
 
-### Favorites
-
-- **⭐ Favorite** — save a poem (Ganjoor path + title) to the user profile; list and reopen from the menu.
-
-Requires MongoDB; user document is created on `/start` (recommended before using favorites).
-
 ### Commands
 
 | Command | Description |
@@ -36,12 +30,10 @@ Requires MongoDB; user document is created on `/start` (recommended before using
 | `/start` | Main menu (poets + shortcuts) |
 | `/poem` | Random **Hafez** ghazal |
 | `/fal` | Same as `/poem` (فال-style) |
-| `/favorites` | List starred poems |
 
 ### Main menu shortcuts (buttons)
 
 - One **random** poem (multi-poet pool)
-- **علاقه‌مندی‌ها** — favorites
 
 Each poem view includes a link to the same text on **ganjoor.net** and a back button.
 
@@ -52,7 +44,6 @@ Usage events are appended to the **`analytics_events`** collection (`event` name
 ### Tech notes
 
 - **Pagination** on long poem lists (inline keyboard).
-- **Callback tokens** (`poem_tokens`) for favorite buttons stay within Telegram’s `callback_data` size limits (short TTL in MongoDB).
 
 ## Requirements
 
@@ -84,7 +75,7 @@ cp .env.example .env   # then edit .env
 npm start              # long polling — no HTTPS or WEBHOOK_URL needed
 ```
 
-Use `/start` to open the menu; try `/favorites` after `/start` so your user exists in MongoDB for favorites.
+Use `/start` to open the menu and pick a poet or random poem.
 
 ### Try webhooks locally (ngrok)
 
