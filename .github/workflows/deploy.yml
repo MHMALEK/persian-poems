@@ -5,6 +5,10 @@
 #   VM_HOST, VM_USER, VM_SSH_KEY, TELEGRAM_BOT_TOKEN, WEBHOOK_URL
 #   MONGODB_URL or DATABASE_URL (Mongo URI; app reads MONGODB_URL inside the container)
 # Optional: TELEGRAM_WEBHOOK_SECRET
+# Optional (daily poem broadcast, Asia/Tehran — see src/jobs/daily-digest.ts):
+#   DAILY_DIGEST_ENABLED — set to exactly true to turn on (same as .env)
+#   DAILY_DIGEST_HOUR_TEHRAN — default 8 if omitted
+#   DAILY_DIGEST_MINUTE_TEHRAN — default 0 if omitted
 #
 # Container listens on 3000; VM maps host port 3002 → 3000 (reverse proxy to http://127.0.0.1:3002).
 #
@@ -66,13 +70,16 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          DAILY_DIGEST_ENABLED: ${{ secrets.DAILY_DIGEST_ENABLED }}
+          DAILY_DIGEST_HOUR_TEHRAN: ${{ secrets.DAILY_DIGEST_HOUR_TEHRAN }}
+          DAILY_DIGEST_MINUTE_TEHRAN: ${{ secrets.DAILY_DIGEST_MINUTE_TEHRAN }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,DATABASE_URL,WEBHOOK_URL,TELEGRAM_WEBHOOK_SECRET
+          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,DATABASE_URL,WEBHOOK_URL,TELEGRAM_WEBHOOK_SECRET,DAILY_DIGEST_ENABLED,DAILY_DIGEST_HOUR_TEHRAN,DAILY_DIGEST_MINUTE_TEHRAN
           script: |
             set -e
             if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
@@ -90,6 +97,9 @@ jobs:
             fi
             E="-e TELEGRAM_BOT_TOKEN -e MONGODB_URL -e WEBHOOK_URL"
             if [ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ]; then E="$E -e TELEGRAM_WEBHOOK_SECRET"; fi
+            if [ -n "${DAILY_DIGEST_ENABLED:-}" ]; then E="$E -e DAILY_DIGEST_ENABLED"; fi
+            if [ -n "${DAILY_DIGEST_HOUR_TEHRAN:-}" ]; then E="$E -e DAILY_DIGEST_HOUR_TEHRAN"; fi
+            if [ -n "${DAILY_DIGEST_MINUTE_TEHRAN:-}" ]; then E="$E -e DAILY_DIGEST_MINUTE_TEHRAN"; fi
             # Public GHCR image: anonymous pull on the VPS (no docker login).
             if ! docker pull "${{ env.IMAGE_NAME }}:latest"; then
               echo "docker pull failed (is the package public on GHCR?)"

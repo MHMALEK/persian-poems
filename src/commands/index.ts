@@ -3,6 +3,7 @@ import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
 import { upsertUserOnStart } from "../services/users";
 import { showMainMenu } from "../shared/commands";
+import { selectAndRenderRandomPoem } from "../shared/random-poem";
 
 const addDefaultCommands = () => {
   PersianPoemsTelegramBot.addCommandEventListener("start", async (ctx) => {
@@ -19,6 +20,12 @@ const addDefaultCommands = () => {
   PersianPoemsTelegramBot.addCommandEventListener("fal", async (ctx) => {
     saveAnalyticsEvent(ctx, "fal");
     await selectAndRenderRandomGhazal(ctx);
+  });
+
+  /** Multi-poet pool (same as the «یک شعر تصادفی» button). Telegram command names use underscores, not hyphens. */
+  PersianPoemsTelegramBot.addCommandEventListener("random_poem", async (ctx) => {
+    saveAnalyticsEvent(ctx, "random_poem_command");
+    await selectAndRenderRandomPoem(ctx);
   });
 
 };

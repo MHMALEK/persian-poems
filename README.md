@@ -30,6 +30,7 @@ Optional **scheduled daily broadcast** (same random poem for all users who have 
 | `/start` | Main menu (poets + shortcuts) |
 | `/poem` | Random **Hafez** ghazal |
 | `/fal` | Same as `/poem` (فال-style) |
+| `/random_poem` | Random poem from **any** poet in the multi-poet pool (same as the inline «یک شعر تصادفی» button) |
 
 ### Main menu shortcuts (buttons)
 
