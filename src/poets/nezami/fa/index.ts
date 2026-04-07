@@ -7,7 +7,10 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { poemAwareMenuMode } from "../../../shared/menu-delivery";
+import {
+  editMessageOrReply,
+  poemAwareMenuMode,
+} from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
@@ -31,7 +34,7 @@ const SECTIONS: { label: string; path: string; key: string }[] = [
   { label: "خردنامه", path: "5ganj/kheradname", key: "nezami_kh" },
 ];
 
-const showBio = (ctx: Context) => {
+const showBio = async (ctx: Context) => {
   const text =
     "نظامی گنجوی از برجسته‌ترین حماسه‌سرایان پارسی‌سرای ایران است. پنج‌گانهٔ او (مخزن‌الاسرار، خسرو و شیرین، لیلی و مجنون، هفت‌پیکر و شرفنامه) از آثار ماندگار ادبیات فارسی است.";
   const keyboard = new InlineKeyboard();
@@ -40,7 +43,7 @@ const showBio = (ctx: Context) => {
     .row()
     .text("بازگشت", "back_to_main_nezami:fa");
 
-  return ctx.reply(text, { reply_markup: keyboard });
+  return editMessageOrReply(ctx, text, { reply_markup: keyboard });
 };
 
 const showPoem = async (
@@ -58,13 +61,6 @@ const showPoem = async (
     listNav ? { listNav } : undefined
   );
   const chunks = normalizeTelegramChunks(splitMessage(text, 150));
-  if (ctx.callbackQuery && chunks.length === 1) {
-    await ctx.editMessageText(chunks[0], {
-      reply_markup: keyboard,
-      parse_mode: "HTML",
-    });
-    return;
-  }
   await replyPoemChunks(ctx, chunks, keyboard);
 };
 
@@ -146,7 +142,7 @@ const createNezamiMenuFa = (
 
 const createNezami = (
   ctx: Context,
-  editOrReply: "editMessage" | "replyMessage" = "replyMessage"
+  editOrReply: "editMessage" | "replyMessage" = "editMessage"
 ) => {
   const menu = new InlineKeyboard();
   SECTIONS.forEach((s) => {
@@ -221,7 +217,7 @@ const addNezamiFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/nezami_bio:fa/, async (ctx) => {
     saveAnalyticsEvent(ctx, "nezami_bio");
-    showBio(ctx);
+    await showBio(ctx);
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/nezami_poems:fa/, async (ctx) => {

@@ -8,13 +8,17 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { poemAwareMenuMode } from "../../../shared/menu-delivery";
+import {
+  editMessageOrReply,
+  poemAwareMenuMode,
+} from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
 } from "../../../shared/poem-display";
 import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
+import { replyPoemChunks } from "../../../shared/send-poem-message";
 import { normalizeTelegramChunks, splitMessage } from "../../../utils/splitter";
 const config = {
   pagination: {
@@ -24,7 +28,7 @@ const config = {
   sourceBaseUrl: "https://ganjoor.net/moulavi",
 };
 
-const showBio = (ctx: Context) => {
+const showBio = async (ctx: Context) => {
   const text =
     "حکیم ابوالفتح عمربن ابراهیم المولانای مشهور به «مولانا» فیلسوف و ریاضیدان و منجم و شاعر ایرانی در سال ۴۳۹ هجری قمری در نیشابور زاده شد. وی در ترتیب رصد ملکشاهی و اصلاح تقویم جلالی همکاری داشت. وی اشعاری به زبان پارسی و تازی و کتابهایی نیز به هر دو زبان دارد. از آثار او در ریاضی و جبر و مقابله رساله فی شرح ما اشکل من مصادرات کتاب اقلیدس، رساله فی الاحتیال لمعرفه مقداری الذهب و الفضه فی جسم مرکب منهما، و لوازم الامکنه را می‌توان نام برد. وی به سال ۵۲۶ هجری قمری درگذشت. رباعیات او شهرت جهانی دارد.  ";
   const keyboard = new InlineKeyboard();
@@ -34,9 +38,7 @@ const showBio = (ctx: Context) => {
     .text("بازگشت", "back_to_main_moulavi:fa")
     .row();
 
-  return ctx.reply(text, {
-    reply_markup: keyboard,
-  });
+  return editMessageOrReply(ctx, text, { reply_markup: keyboard });
 };
 
 const showPoem = async (
@@ -56,21 +58,7 @@ const showPoem = async (
     listNav ? { listNav } : undefined
   );
 
-  if (ctx.callbackQuery && chunks.length === 1) {
-    await ctx.editMessageText(chunks[0], {
-      reply_markup: keyboard,
-      parse_mode: "HTML",
-    });
-    return;
-  }
-
-  for (let i = 0; i < chunks.length; i++) {
-    const isLast = i === chunks.length - 1;
-    await ctx.reply(chunks[i], {
-      reply_markup: isLast ? keyboard : undefined,
-      parse_mode: "HTML",
-    });
-  }
+  await replyPoemChunks(ctx, chunks, keyboard);
 };
 
 const showPage = (
@@ -163,7 +151,7 @@ const createMoulaviMenuFa = (
 
 const createMoulavi = (
   ctx: Context,
-  editOrReply: "editMessage" | "replyMessage" = "replyMessage"
+  editOrReply: "editMessage" | "replyMessage" = "editMessage"
 ) => {
   const newMenu = new InlineKeyboard()
 
@@ -188,7 +176,7 @@ const createMoulavi = (
 
 const createMoulaviShamsMenu = (
   ctx: Context,
-  editOrReply: "editMessage" | "replyMessage" = "replyMessage"
+  editOrReply: "editMessage" | "replyMessage" = "editMessage"
 ) => {
   const newMenu = new InlineKeyboard()
 
@@ -217,7 +205,7 @@ const createMoulaviShamsMenu = (
 
 const createMoulaviMasnaviMenu = (
   ctx: Context,
-  editOrReply: "editMessage" | "replyMessage" = "replyMessage"
+  editOrReply: "editMessage" | "replyMessage" = "editMessage"
 ) => {
   const newMenu = new InlineKeyboard()
 
@@ -456,7 +444,7 @@ const addmoulaviFaCallbacks = () => {
   // bio
   PersianPoemsTelegramBot.bot?.callbackQuery(/moulavi_bio:fa/, async (ctx) => {
     saveAnalyticsEvent(ctx, "moulavi_bio");
-    showBio(ctx);
+    await showBio(ctx);
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(

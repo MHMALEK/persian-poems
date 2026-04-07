@@ -7,20 +7,25 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { poemAwareMenuMode } from "../../../shared/menu-delivery";
+import {
+  editMessageOrReply,
+  poemAwareMenuMode,
+} from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
 } from "../../../shared/poem-display";
 import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
+import { replyPoemChunks } from "../../../shared/send-poem-message";
+import { normalizeTelegramChunks, splitMessage } from "../../../utils/splitter";
 
 const config = {
   pagination: { itemPerPage: 10 },
   wikiPediaUrl: "https://fa.wikipedia.org/wiki/%D8%B3%D8%B9%D8%AF%DB%8C",
 };
 
-const showBio = (ctx: Context) => {
+const showBio = async (ctx: Context) => {
   const text =
     "ابومحمد مصلح‌الدین بن عبدالله شیرازی، متخلص به «سعدی»، از بزرگ‌ترین سخنوران پارسی‌گوی ایران است. دیوان او شامل غزلیات، قصاید، ترجیع‌بند، مقطعات و رباعیات است و آثار منثور او مانند گلستان و بوستان از مشهورترین نثرهای ادبی فارسی به شمار می‌روند.";
   const keyboard = new InlineKeyboard();
@@ -29,7 +34,7 @@ const showBio = (ctx: Context) => {
     .row()
     .text("بازگشت", "back_to_main_saadi:fa");
 
-  return ctx.reply(text, { reply_markup: keyboard });
+  return editMessageOrReply(ctx, text, { reply_markup: keyboard });
 };
 
 const showPoem = async (
@@ -46,17 +51,8 @@ const showPoem = async (
     "saadi_poems:fa",
     listNav ? { listNav } : undefined
   );
-  if (ctx.callbackQuery) {
-    await ctx.editMessageText(text, {
-      reply_markup: keyboard,
-      parse_mode: "HTML",
-    });
-    return;
-  }
-  await ctx.reply(text, {
-    reply_markup: keyboard,
-    parse_mode: "HTML",
-  });
+  const chunks = normalizeTelegramChunks(splitMessage(text, 150));
+  await replyPoemChunks(ctx, chunks, keyboard);
 };
 
 const showPage = (
@@ -137,7 +133,7 @@ const createSaadiMenuFa = (
 
 const createSaadi = (
   ctx: Context,
-  editOrReply: "editMessage" | "replyMessage" = "replyMessage"
+  editOrReply: "editMessage" | "replyMessage" = "editMessage"
 ) => {
   const newMenu = new InlineKeyboard()
     .text("غزلیات دیوان", "saadi_ghazals")
@@ -225,7 +221,7 @@ const addSaadiFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/saadi_bio:fa/, async (ctx) => {
     saveAnalyticsEvent(ctx, "saadi_bio");
-    showBio(ctx);
+    await showBio(ctx);
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/saadi_poems:fa/, async (ctx) => {

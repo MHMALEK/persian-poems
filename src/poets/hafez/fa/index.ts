@@ -9,13 +9,18 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { poemAwareMenuMode } from "../../../shared/menu-delivery";
+import {
+  editMessageOrReply,
+  poemAwareMenuMode,
+} from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
 } from "../../../shared/poem-display";
 import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
+import { replyPoemChunks } from "../../../shared/send-poem-message";
+import { normalizeTelegramChunks, splitMessage } from "../../../utils/splitter";
 const config = {
   pagination: {
     itemPerPage: 10,
@@ -24,7 +29,7 @@ const config = {
   sourceBaseUrl: "https://ganjoor.net/",
 };
 
-const showHafezBio = (ctx: Context) => {
+const showHafezBio = async (ctx: Context) => {
   const text =
     "خواجه شمس‌الدین محمد شیرازی متخلص به «حافظ»، غزلسرای بزرگ و از خداوندان شعر و ادب پارسی است. وی حدود سال ۷۲۶ هجری قمری در شیراز متولد شد. علوم و فنون را در محفل درس استادان زمان فراگرفت و در علوم ادبی عصر پایه‌ای رفیع یافت. خاصه در علوم فقهی و الهی تأمل بسیار کرد و قرآن را با چهارده روایت مختلف از بر داشت. گوته دانشمند بزرگ و شاعر و سخنور مشهور آلمانی دیوان شرقی خود را به نام او و با کسب الهام از افکار وی تدوین کرد. دیوان اشعار او شامل غزلیات، چند قصیده، چند مثنوی، قطعات و رباعیات است. وی به سال ۷۹۲ هجری قمری در شیراز درگذشت. آرامگاه او در حافظیهٔ شیراز زیارتگاه صاحبنظران و عاشقان شعر و ادب پارسی است.    ";
   const keyboard = new InlineKeyboard();
@@ -34,9 +39,7 @@ const showHafezBio = (ctx: Context) => {
     .text("بازگشت", "back:fa")
     .row();
 
-  return ctx.reply(text, {
-    reply_markup: keyboard,
-  });
+  return editMessageOrReply(ctx, text, { reply_markup: keyboard });
 };
 
 const showPoem = async (
@@ -54,17 +57,8 @@ const showPoem = async (
     "hafez_poems:fa",
     listNav ? { listNav } : undefined
   );
-  if (ctx.callbackQuery) {
-    await ctx.editMessageText(text, {
-      reply_markup: keyboard,
-      parse_mode: "HTML",
-    });
-    return;
-  }
-  await ctx.reply(text, {
-    reply_markup: keyboard,
-    parse_mode: "HTML",
-  });
+  const chunks = normalizeTelegramChunks(splitMessage(text, 150));
+  await replyPoemChunks(ctx, chunks, keyboard);
 };
 
 const showPage = (
@@ -158,7 +152,7 @@ const createHafezMenuFa = (
 
 const createHafez = (
   ctx: Context,
-  editOrReply: "editMessage" | "replyMessage" = "replyMessage"
+  editOrReply: "editMessage" | "replyMessage" = "editMessage"
 ) => {
   const newMenu = new InlineKeyboard()
     .text("غزلیات", "hafez_ghazal")
@@ -307,7 +301,7 @@ const addHafezFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_bio:fa/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "hafez_bio");
-    showHafezBio(ctx);
+    await showHafezBio(ctx);
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/hafez_get_fal/, async (ctx: any) => {

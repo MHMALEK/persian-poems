@@ -1,4 +1,4 @@
-import type { Context } from "grammy";
+import type { Context, InlineKeyboard } from "grammy";
 
 /**
  * Poem keyboards use these callbacks; menu-only keyboards do not.
@@ -36,4 +36,24 @@ function poemAwareMenuMode(ctx: Context): "replyMessage" | "editMessage" {
   return "editMessage";
 }
 
-export { isPoemKeyboardMessage, poemAwareMenuMode, shouldSendMenuAsNewMessage };
+/**
+ * One text bubble: edit the message from an inline callback when possible;
+ * otherwise send a new message (e.g. slash commands).
+ */
+async function editMessageOrReply(
+  ctx: Context,
+  text: string,
+  options: { reply_markup?: InlineKeyboard; parse_mode?: "HTML" }
+): Promise<unknown> {
+  if (ctx.callbackQuery?.message !== undefined) {
+    return ctx.editMessageText(text, options);
+  }
+  return ctx.reply(text, options);
+}
+
+export {
+  editMessageOrReply,
+  isPoemKeyboardMessage,
+  poemAwareMenuMode,
+  shouldSendMenuAsNewMessage,
+};

@@ -8,13 +8,18 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { poemAwareMenuMode } from "../../../shared/menu-delivery";
+import {
+  editMessageOrReply,
+  poemAwareMenuMode,
+} from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
 } from "../../../shared/poem-display";
 import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
+import { replyPoemChunks } from "../../../shared/send-poem-message";
+import { normalizeTelegramChunks, splitMessage } from "../../../utils/splitter";
 const config = {
   pagination: {
     itemPerPage: 10,
@@ -23,7 +28,7 @@ const config = {
   sourceBaseUrl: "https://ganjoor.net/khayyam",
 };
 
-const showBio = (ctx: Context) => {
+const showBio = async (ctx: Context) => {
   const text =
     "حکیم ابوالفتح عمربن ابراهیم الخیامی مشهور به «خیام» فیلسوف و ریاضیدان و منجم و شاعر ایرانی در سال ۴۳۹ هجری قمری در نیشابور زاده شد. وی در ترتیب رصد ملکشاهی و اصلاح تقویم جلالی همکاری داشت. وی اشعاری به زبان پارسی و تازی و کتابهایی نیز به هر دو زبان دارد. از آثار او در ریاضی و جبر و مقابله رساله فی شرح ما اشکل من مصادرات کتاب اقلیدس، رساله فی الاحتیال لمعرفه مقداری الذهب و الفضه فی جسم مرکب منهما، و لوازم الامکنه را می‌توان نام برد. وی به سال ۵۲۶ هجری قمری درگذشت. رباعیات او شهرت جهانی دارد.  ";
   const keyboard = new InlineKeyboard();
@@ -33,9 +38,7 @@ const showBio = (ctx: Context) => {
     .text("بازگشت", "back_to_main_khayam:fa")
     .row();
 
-  return ctx.reply(text, {
-    reply_markup: keyboard,
-  });
+  return editMessageOrReply(ctx, text, { reply_markup: keyboard });
 };
 
 const showPoem = async (
@@ -52,17 +55,8 @@ const showPoem = async (
     "khayam_poems:fa",
     listNav ? { listNav } : undefined
   );
-  if (ctx.callbackQuery) {
-    await ctx.editMessageText(text, {
-      reply_markup: keyboard,
-      parse_mode: "HTML",
-    });
-    return;
-  }
-  await ctx.reply(text, {
-    reply_markup: keyboard,
-    parse_mode: "HTML",
-  });
+  const chunks = normalizeTelegramChunks(splitMessage(text, 150));
+  await replyPoemChunks(ctx, chunks, keyboard);
 };
 
 const showPage = (
@@ -155,7 +149,7 @@ const createKhayamMenuFa = (
 
 const createKhayam = (
   ctx: Context,
-  editOrReply: "editMessage" | "replyMessage" = "replyMessage"
+  editOrReply: "editMessage" | "replyMessage" = "editMessage"
 ) => {
   const newMenu = new InlineKeyboard()
 
@@ -236,7 +230,7 @@ const addkhayamFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_bio:fa/, async (ctx: any) => {
     saveAnalyticsEvent(ctx, "khayam_bio");
-    showBio(ctx);
+    await showBio(ctx);
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/khayam_poems:fa/, async (ctx: any) => {

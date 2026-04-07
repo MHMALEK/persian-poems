@@ -67,14 +67,6 @@ async function renderPoemAtListIndex(
     { listNav }
   );
 
-  if (chunks.length === 1) {
-    await ctx.editMessageText(chunks[0], {
-      parse_mode: "HTML",
-      reply_markup: keyboard,
-    });
-    return;
-  }
-
   await replyPoemChunks(ctx, chunks, keyboard);
 }
 

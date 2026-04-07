@@ -8,13 +8,18 @@ import {
 } from "../../../services/ganjoor-crawler";
 import PersianPoemsTelegramBot from "../../../services/telegram-bot";
 import { createPoetListFa } from "../../../shared/commands";
-import { poemAwareMenuMode } from "../../../shared/menu-delivery";
+import {
+  editMessageOrReply,
+  poemAwareMenuMode,
+} from "../../../shared/menu-delivery";
 import {
   buildPoemActionKeyboard,
   type PoemListNav,
 } from "../../../shared/poem-display";
 import { ganjoorIndexPathFromPoemLink } from "../../../shared/ganjoor-path";
 import { derivePoemTitle } from "../../../shared/poem-titles";
+import { replyPoemChunks } from "../../../shared/send-poem-message";
+import { normalizeTelegramChunks, splitMessage } from "../../../utils/splitter";
 
 const AUTHOR = "ferdousi";
 
@@ -23,7 +28,7 @@ const config = {
   wikiPediaUrl: "https://fa.wikipedia.org/wiki/%D9%81%D8%B1%D8%AF%D9%88%D8%B3%DB%8C",
 };
 
-const showBio = (ctx: Context) => {
+const showBio = async (ctx: Context) => {
   const text =
     "حکیم ابوالقاسم فردوسی طوسی، حماسه‌سرای بزرگ پارسی‌گوی و سرایندهٔ شاهنامه است. شاهنامه، حماسهٔ ملی ایران و از پایدارترین سروده‌های ادبیات فارسی به‌شمار می‌رود.";
   const keyboard = new InlineKeyboard();
@@ -32,7 +37,7 @@ const showBio = (ctx: Context) => {
     .row()
     .text("بازگشت", "back_to_main_ferdousi:fa");
 
-  return ctx.reply(text, { reply_markup: keyboard });
+  return editMessageOrReply(ctx, text, { reply_markup: keyboard });
 };
 
 const showPoem = async (
@@ -49,17 +54,8 @@ const showPoem = async (
     "ferdousi_poems:fa",
     listNav ? { listNav } : undefined
   );
-  if (ctx.callbackQuery) {
-    await ctx.editMessageText(text, {
-      reply_markup: keyboard,
-      parse_mode: "HTML",
-    });
-    return;
-  }
-  await ctx.reply(text, {
-    reply_markup: keyboard,
-    parse_mode: "HTML",
-  });
+  const chunks = normalizeTelegramChunks(splitMessage(text, 150));
+  await replyPoemChunks(ctx, chunks, keyboard);
 };
 
 const showPoemList = (
@@ -199,7 +195,7 @@ const createFerdousiMenuFa = (
 
 const createFerdousi = (
   ctx: Context,
-  editOrReply: "editMessage" | "replyMessage" = "replyMessage"
+  editOrReply: "editMessage" | "replyMessage" = "editMessage"
 ) => {
   const menu = new InlineKeyboard()
     .text("شاهنامه — آغاز", "ferdousi_shahname_aghaz")
@@ -337,7 +333,7 @@ const addFerdousiFaCallbacks = () => {
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/ferdousi_bio:fa/, async (ctx) => {
     saveAnalyticsEvent(ctx, "ferdousi_bio");
-    showBio(ctx);
+    await showBio(ctx);
   });
 
   PersianPoemsTelegramBot.bot?.callbackQuery(/ferdousi_poems:fa/, async (ctx) => {

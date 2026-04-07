@@ -50,7 +50,7 @@ async function pickRandomPoemFromPool(): Promise<{
 }
 
 /**
- * Builds random poem content for sending as **new** messages (e.g. «یک شعر دیگر»).
+ * Builds random poem content; {@link replyPoemChunks} edits or splits as needed.
  */
 async function renderRandomPoemReply(
   ctx: Context
