@@ -21,7 +21,11 @@ async function upsertUserOnStart(ctx: Context): Promise<void> {
           username: from.username,
           languageCode: from.language_code,
           isBot: from.is_bot ?? false,
+          // Anyone interacting with the bot is reachable again — reactivate
+          // them so they resume receiving broadcasts.
+          active: true,
         },
+        $unset: { deactivatedAt: "", deactivationReason: "" },
       },
       { upsert: true, new: true }
     );
@@ -30,4 +34,29 @@ async function upsertUserOnStart(ctx: Context): Promise<void> {
   }
 }
 
-export { BotUser, upsertUserOnStart };
+/**
+ * Marks a user as inactive so broadcasts skip them. Called when Telegram tells
+ * us the user is unreachable (blocked the bot, deactivated their account, etc.).
+ * Idempotent and best-effort — failures are logged, never thrown.
+ */
+async function deactivateUser(
+  telegramId: number,
+  reason: string
+): Promise<void> {
+  try {
+    await BotUser.updateOne(
+      { telegramId },
+      {
+        $set: {
+          active: false,
+          deactivatedAt: new Date(),
+          deactivationReason: reason,
+        },
+      }
+    );
+  } catch (err) {
+    console.error("deactivateUser failed", telegramId, err);
+  }
+}
+
+export { BotUser, upsertUserOnStart, deactivateUser };

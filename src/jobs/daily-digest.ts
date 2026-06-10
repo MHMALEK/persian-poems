@@ -1,6 +1,6 @@
 import cron from "node-cron";
-import { Bot } from "grammy";
-import { BotUser } from "../services/users";
+import { Bot, GrammyError } from "grammy";
+import { BotUser, deactivateUser } from "../services/users";
 import type { PoemRef } from "../services/users/poems";
 import { buildPoemActionKeyboard } from "../shared/poem-display";
 import {
@@ -14,6 +14,23 @@ const INTRO_HTML =
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Returns a reason string when a send error means the user is permanently
+ * unreachable (so we should stop broadcasting to them), or `null` for
+ * transient errors worth retrying on the next run.
+ */
+function unreachableUserReason(e: unknown): string | null {
+  if (e instanceof GrammyError) {
+    // 403: bot was blocked by the user / user is deactivated / kicked.
+    if (e.error_code === 403) return e.description ?? "forbidden";
+    // 400 chat not found: the account no longer exists.
+    if (e.error_code === 400 && /chat not found/i.test(e.description ?? "")) {
+      return e.description ?? "chat not found";
+    }
+  }
+  return null;
 }
 
 async function sendDigestToUser(
@@ -33,8 +50,10 @@ async function sendDigestToUser(
 }
 
 /**
- * Picks one random poem (from the full poet pool) and sends it to every user
- * who has used /start (all rows in `bot_users`).
+ * Picks one random poem (from the full poet pool) and sends it to every active
+ * user who has used /start (rows in `bot_users` where `active` is not false).
+ * Users who have blocked the bot (or are otherwise unreachable) are deactivated
+ * so future runs skip them.
  */
 async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
   const picked = await pickRandomPoemFromPool();
@@ -44,10 +63,13 @@ async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
   }
 
   const { chunks, poem } = picked;
-  const users = await BotUser.find({}).select("telegramId").lean();
+  const users = await BotUser.find({ active: { $ne: false } })
+    .select("telegramId")
+    .lean();
 
   let ok = 0;
   let failed = 0;
+  let deactivated = 0;
   for (const u of users) {
     const tid = u.telegramId;
     try {
@@ -55,12 +77,19 @@ async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
       ok += 1;
     } catch (e) {
       failed += 1;
-      console.error("daily digest: send failed", tid, e);
+      const reason = unreachableUserReason(e);
+      if (reason) {
+        await deactivateUser(tid, reason);
+        deactivated += 1;
+        console.warn("daily digest: deactivated unreachable user", tid, reason);
+      } else {
+        console.error("daily digest: send failed", tid, e);
+      }
     }
     await delay(55);
   }
   console.log(
-    `daily digest: finished recipients=${users.length} ok=${ok} failed=${failed}`
+    `daily digest: finished recipients=${users.length} ok=${ok} failed=${failed} deactivated=${deactivated}`
   );
 }
 
