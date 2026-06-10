@@ -69,6 +69,7 @@ jobs:
           MONGODB_URL: ${{ secrets.MONGODB_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+          BOT_WEBHOOK_EXTERNAL: ${{ secrets.BOT_WEBHOOK_EXTERNAL }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           DAILY_DIGEST_ENABLED: ${{ secrets.DAILY_DIGEST_ENABLED }}
           DAILY_DIGEST_HOUR_TEHRAN: ${{ secrets.DAILY_DIGEST_HOUR_TEHRAN }}
@@ -79,15 +80,18 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,DATABASE_URL,WEBHOOK_URL,TELEGRAM_WEBHOOK_SECRET,DAILY_DIGEST_ENABLED,DAILY_DIGEST_HOUR_TEHRAN,DAILY_DIGEST_MINUTE_TEHRAN
+          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,DATABASE_URL,WEBHOOK_URL,BOT_WEBHOOK_EXTERNAL,TELEGRAM_WEBHOOK_SECRET,DAILY_DIGEST_ENABLED,DAILY_DIGEST_HOUR_TEHRAN,DAILY_DIGEST_MINUTE_TEHRAN
           script: |
             set -e
             if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
               echo "TELEGRAM_BOT_TOKEN must be set (GitHub Actions secret)"
               exit 1
             fi
-            if [ -z "${WEBHOOK_URL:-}" ]; then
-              echo "WEBHOOK_URL must be set (public https URL for Telegram webhook)"
+            # WEBHOOK_URL is only required when the bot registers its own webhook.
+            # With BOT_WEBHOOK_EXTERNAL=true an external process (e.g. a Cloudflare
+            # quick tunnel) owns the public URL, so WEBHOOK_URL is not needed.
+            if [ "${BOT_WEBHOOK_EXTERNAL:-}" != "true" ] && [ -z "${WEBHOOK_URL:-}" ]; then
+              echo "WEBHOOK_URL must be set (public https URL for Telegram webhook), or set BOT_WEBHOOK_EXTERNAL=true"
               exit 1
             fi
             export MONGODB_URL="${MONGODB_URL:-${DATABASE_URL:-}}"
@@ -95,7 +99,9 @@ jobs:
               echo "MONGODB_URL or DATABASE_URL must be set (MongoDB connection string)"
               exit 1
             fi
-            E="-e TELEGRAM_BOT_TOKEN -e MONGODB_URL -e WEBHOOK_URL"
+            E="-e TELEGRAM_BOT_TOKEN -e MONGODB_URL"
+            if [ -n "${WEBHOOK_URL:-}" ]; then E="$E -e WEBHOOK_URL"; fi
+            if [ -n "${BOT_WEBHOOK_EXTERNAL:-}" ]; then E="$E -e BOT_WEBHOOK_EXTERNAL"; fi
             if [ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ]; then E="$E -e TELEGRAM_WEBHOOK_SECRET"; fi
             if [ -n "${DAILY_DIGEST_ENABLED:-}" ]; then E="$E -e DAILY_DIGEST_ENABLED"; fi
             if [ -n "${DAILY_DIGEST_HOUR_TEHRAN:-}" ]; then E="$E -e DAILY_DIGEST_HOUR_TEHRAN"; fi
