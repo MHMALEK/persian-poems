@@ -21,7 +21,11 @@ Browse by author; each poet has a Farsi menu with bios where applicable and poem
 
 - **Random poem** — picks from several poets and corpora (حافظ، خیام، مولانا، سعدی، فردوسی، نظامی) with long-text splitting where needed.
 
-Optional **scheduled daily broadcast** (same random poem for all users who have used `/start`, Asia/Tehran) is controlled with `DAILY_DIGEST_*` env vars.
+### Daily poem (opt-in)
+
+One random poem per day (same poem for everyone, Asia/Tehran). **Off by default for every user.** A user turns it on or off themselves from the «شعر روزانه» main-menu button or `/daily_poem`; every delivered daily poem also carries a «خاموش کردن شعر روزانه» button. The choice is stored per user in `bot_users.dailyDigest` and survives `/start`.
+
+The scheduler itself is switched on server-side with `DAILY_DIGEST_ENABLED=true` (time via `DAILY_DIGEST_HOUR_TEHRAN` / `DAILY_DIGEST_MINUTE_TEHRAN`, default 08:00). It only sends to users with `dailyDigest: true`.
 
 ### Commands
 
@@ -31,10 +35,12 @@ Optional **scheduled daily broadcast** (same random poem for all users who have 
 | `/poem` | Random **Hafez** ghazal |
 | `/fal` | Same as `/poem` (فال-style) |
 | `/random_poem` | Random poem from **any** poet in the multi-poet pool (same as the inline «یک شعر تصادفی» button) |
+| `/daily_poem` | Turn the daily poem on or off for yourself (same as the inline «شعر روزانه» button) |
 
 ### Main menu shortcuts (buttons)
 
 - One **random** poem (multi-poet pool)
+- **Daily poem** on/off screen (per-user opt-in, default off)
 
 Each poem view includes a link to the same text on **ganjoor.net** and a back button.
 
@@ -132,7 +138,7 @@ Required for `deploy.yml`:
 - `WEBHOOK_URL`  
 - `MONGODB_URL` **or** `DATABASE_URL` (Mongo URI)
 
-Optional: `TELEGRAM_WEBHOOK_SECRET`
+Optional: `TELEGRAM_WEBHOOK_SECRET`, `DAILY_DIGEST_ENABLED` (`true` starts the daily poem scheduler; recipients are opt-in users only), `DAILY_DIGEST_HOUR_TEHRAN`, `DAILY_DIGEST_MINUTE_TEHRAN`
 
 After the first successful publish, open **GitHub → Packages → this container image → Package settings** and set visibility to **Public** so the VM can `docker pull` without logging in to GHCR (same pattern as a typical small VPS deploy).
 

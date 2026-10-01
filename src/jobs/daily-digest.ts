@@ -43,17 +43,16 @@ async function sendDigestToUser(
     undefined,
     poem,
     RANDOM_POEM_BACK_CALLBACK,
-    { actorUserId: telegramId }
+    { actorUserId: telegramId, dailyDigestActions: true }
   );
   await bot.api.sendMessage(telegramId, INTRO_HTML, { parse_mode: "HTML" });
   await sendPoemChunksToChat(bot, telegramId, chunks, keyboard);
 }
 
 /**
- * Picks one random poem (from the full poet pool) and sends it to every active
- * user who has used /start (rows in `bot_users` where `active` is not false).
- * Users who have blocked the bot (or are otherwise unreachable) are deactivated
- * so future runs skip them.
+ * Picks one random poem (from the full poet pool) and sends it to every user
+ * who has opted in (`dailyDigest: true`) and is still reachable (`active` not
+ * false). Users who have blocked the bot are deactivated so future runs skip them.
  */
 async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
   const picked = await pickRandomPoemFromPool();
@@ -63,9 +62,9 @@ async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
   }
 
   const { chunks, poem } = picked;
-  const users = await BotUser.find({ active: { $ne: false } })
+  const users = await BotUser.find({ dailyDigest: true, active: { $ne: false } })
     .select("telegramId")
-    .lean();
+    .lean<{ telegramId: number }[]>();
 
   let ok = 0;
   let failed = 0;
@@ -94,16 +93,10 @@ async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
 }
 
 /**
- * Cron in `Asia/Tehran`. Enable with `DAILY_DIGEST_ENABLED=true`.
- * Default: 08:00 Tehran. Override with `DAILY_DIGEST_HOUR_TEHRAN` / `DAILY_DIGEST_MINUTE_TEHRAN` (0–23 / 0–59).
+ * Send time in Asia/Tehran from `DAILY_DIGEST_HOUR_TEHRAN` / `DAILY_DIGEST_MINUTE_TEHRAN`
+ * (defaults 08:00). `null` when the env values are out of range.
  */
-function scheduleDailyDigest(bot: Bot): void {
-  const enabled = process.env.DAILY_DIGEST_ENABLED === "true";
-  if (!enabled) {
-    console.log("daily digest: off (set DAILY_DIGEST_ENABLED=true to enable)");
-    return;
-  }
-
+function getDailyDigestSchedule(): { hour: number; minute: number } | null {
   const hour = parseInt(process.env.DAILY_DIGEST_HOUR_TEHRAN ?? "8", 10);
   const minute = parseInt(process.env.DAILY_DIGEST_MINUTE_TEHRAN ?? "0", 10);
   if (
@@ -114,13 +107,32 @@ function scheduleDailyDigest(bot: Bot): void {
     minute < 0 ||
     minute > 59
   ) {
+    return null;
+  }
+  return { hour, minute };
+}
+
+/**
+ * Global scheduler switch: `DAILY_DIGEST_ENABLED=true` starts the cron. It
+ * only decides whether the job runs at all; who receives the poem is the
+ * per-user `dailyDigest` opt-in (see runDailyDigestBroadcast).
+ */
+function scheduleDailyDigest(bot: Bot): void {
+  const enabled = process.env.DAILY_DIGEST_ENABLED === "true";
+  if (!enabled) {
+    console.log("daily digest: off (set DAILY_DIGEST_ENABLED=true to enable)");
+    return;
+  }
+
+  const schedule = getDailyDigestSchedule();
+  if (!schedule) {
     console.error(
       "daily digest: invalid DAILY_DIGEST_HOUR_TEHRAN / DAILY_DIGEST_MINUTE_TEHRAN"
     );
     return;
   }
 
-  const cronExpr = `${minute} ${hour} * * *`;
+  const cronExpr = `${schedule.minute} ${schedule.hour} * * *`;
   cron.schedule(
     cronExpr,
     () => {
@@ -130,8 +142,8 @@ function scheduleDailyDigest(bot: Bot): void {
   );
 
   console.log(
-    `daily digest: scheduled (${cronExpr}, Asia/Tehran) — same random poem for all recipients`
+    `daily digest: scheduled (${cronExpr}, Asia/Tehran) — opted-in users only, same random poem for all`
   );
 }
 
-export { runDailyDigestBroadcast, scheduleDailyDigest };
+export { getDailyDigestSchedule, runDailyDigestBroadcast, scheduleDailyDigest };

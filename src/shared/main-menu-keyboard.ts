@@ -1,4 +1,5 @@
 import { InlineKeyboard } from "grammy";
+import { DAILY_DIGEST_MENU_CALLBACK } from "./daily-digest-callbacks";
 
 /** Callback data used for «منوی اصلی» from pool flows (random poem, etc.). */
 const MAIN_MENU_BACK_CALLBACK = "back_to_poet_menu_fa";
@@ -20,6 +21,7 @@ function buildMainKeyboard(): InlineKeyboard {
     keyboard.text(poet.title, `select_poet_fa:${poet.id}`).row();
   });
   keyboard.text("یک شعر تصادفی برایم بیاور", "random_poem_fa").row();
+  keyboard.text("شعر روزانه (روشن / خاموش)", DAILY_DIGEST_MENU_CALLBACK).row();
   return keyboard;
 }
 

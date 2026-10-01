@@ -5,8 +5,9 @@
 #   VM_HOST, VM_USER, VM_SSH_KEY, TELEGRAM_BOT_TOKEN, WEBHOOK_URL
 #   MONGODB_URL or DATABASE_URL (Mongo URI; app reads MONGODB_URL inside the container)
 # Optional: TELEGRAM_WEBHOOK_SECRET
-# Optional (daily poem broadcast, Asia/Tehran — see src/jobs/daily-digest.ts):
-#   DAILY_DIGEST_ENABLED — set to exactly true to turn on (same as .env)
+# Optional (daily poem scheduler, Asia/Tehran — see src/jobs/daily-digest.ts):
+#   DAILY_DIGEST_ENABLED — set to exactly true to start the cron. Recipients are only
+#   users who opted in themselves (bot_users.dailyDigest, default off), not everyone.
 #   DAILY_DIGEST_HOUR_TEHRAN — default 8 if omitted
 #   DAILY_DIGEST_MINUTE_TEHRAN — default 0 if omitted
 #

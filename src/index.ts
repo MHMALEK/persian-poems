@@ -3,6 +3,7 @@ import PersianPoemsTelegramBot from "./services/telegram-bot";
 import { addHafezFaCallbacks } from "./poets/hafez/fa";
 import { addDefaultCommands } from "./commands";
 import { addSelectPoetCallbacks } from "./shared/commands";
+import { addDailyDigestCallbacks } from "./shared/daily-digest-settings";
 import { addkhayamFaCallbacks } from "./poets/khayyam/fa";
 import { addmoulaviFaCallbacks } from "./poets/molana/fa";
 import { addSaadiFaCallbacks } from "./poets/saadi/fa";
@@ -31,6 +32,7 @@ async function main() {
 
   addDefaultCommands();
   addSelectPoetCallbacks();
+  addDailyDigestCallbacks();
   addPoemNavCallbacks();
   addHafezFaCallbacks();
   addkhayamFaCallbacks();

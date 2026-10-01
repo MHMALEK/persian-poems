@@ -28,6 +28,12 @@ const BotUserSchema = new Schema(
     deactivatedAt: { type: Date },
     /** Why the user was deactivated, e.g. the Telegram error description. */
     deactivationReason: { type: String },
+    /**
+     * Per-user opt-in for the scheduled daily poem. Off by default; the user
+     * turns it on from «شعر روزانه» in the main menu or `/daily_poem`.
+     * Documents without the field (users from before the opt-in) count as off.
+     */
+    dailyDigest: { type: Boolean, default: false, index: true },
     /** Extensible store for future bot preferences. */
     preferences: { type: Schema.Types.Mixed, default: {} },
   },

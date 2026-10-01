@@ -1,4 +1,5 @@
 import { Context } from "grammy";
+import type { User } from "grammy/types";
 import mongoose from "mongoose";
 import BotUserSchema from "./schema";
 
@@ -6,6 +7,7 @@ const BotUser = mongoose.models.BotUser ?? mongoose.model("BotUser", BotUserSche
 
 /**
  * Create or update the user on /start. Safe to call on every start (idempotent).
+ * Never touches `dailyDigest`, so re-running /start keeps the user's choice.
  */
 async function upsertUserOnStart(ctx: Context): Promise<void> {
   const from = ctx.from;
@@ -59,4 +61,41 @@ async function deactivateUser(
   }
 }
 
-export { BotUser, upsertUserOnStart, deactivateUser };
+/** Whether the user has opted in to the daily poem. Missing row or field = off. */
+async function isDailyDigestEnabled(telegramId: number): Promise<boolean> {
+  const doc = await BotUser.findOne({ telegramId })
+    .select("dailyDigest")
+    .lean<{ dailyDigest?: boolean } | null>();
+  return doc?.dailyDigest === true;
+}
+
+/**
+ * Turns the daily poem on or off for one user. Upserts so the choice sticks
+ * even if the user has no row yet (e.g. they never sent /start). Throws on DB
+ * failure so the caller can tell the user the change did not stick.
+ */
+async function setDailyDigest(from: User, enabled: boolean): Promise<void> {
+  await BotUser.updateOne(
+    { telegramId: from.id },
+    {
+      $set: { dailyDigest: enabled, active: true },
+      $unset: { deactivatedAt: "", deactivationReason: "" },
+      $setOnInsert: {
+        firstName: from.first_name,
+        lastName: from.last_name,
+        username: from.username,
+        languageCode: from.language_code,
+        isBot: from.is_bot ?? false,
+      },
+    },
+    { upsert: true }
+  );
+}
+
+export {
+  BotUser,
+  upsertUserOnStart,
+  deactivateUser,
+  isDailyDigestEnabled,
+  setDailyDigest,
+};

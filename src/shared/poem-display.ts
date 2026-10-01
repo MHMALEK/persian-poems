@@ -1,6 +1,10 @@
 import { Context, InlineKeyboard } from "grammy";
 import { createPoemNavToken } from "../services/poem-nav-tokens";
 import { type PoemRef } from "../services/users/poems";
+import {
+  DAILY_DIGEST_OFF_BUTTON_LABEL,
+  DAILY_DIGEST_OFF_INLINE_CALLBACK,
+} from "./daily-digest-callbacks";
 
 export type PoemListNav = {
   author: string;
@@ -16,6 +20,8 @@ export type BuildPoemKeyboardOptions = {
   listNav?: PoemListNav | null;
   /** جریان شعر تصادفی از استخر: یک ردیف «یک شعر تصادفی دیگر». */
   poolActions?: boolean;
+  /** زیر شعر روزانه: یک ردیف «خاموش کردن شعر روزانه». */
+  dailyDigestActions?: boolean;
   /** برای ارسال زمان‌بندی‌شده بدون ctx معمولی. */
   actorUserId?: number;
 };
@@ -53,6 +59,10 @@ async function buildPoemActionKeyboard(
 
   if (options?.poolActions) {
     kb.text("یک شعر تصادفی دیگر", "random_poem_more_fa").row();
+  }
+
+  if (options?.dailyDigestActions) {
+    kb.text(DAILY_DIGEST_OFF_BUTTON_LABEL, DAILY_DIGEST_OFF_INLINE_CALLBACK).row();
   }
 
   kb.text("بازگشت", backCallbackData);

@@ -3,6 +3,7 @@ import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
 import { upsertUserOnStart } from "../services/users";
 import { showMainMenu } from "../shared/commands";
+import { showDailyDigestSettings } from "../shared/daily-digest-settings";
 import { selectAndRenderRandomPoem } from "../shared/random-poem";
 
 const addDefaultCommands = () => {
@@ -28,6 +29,11 @@ const addDefaultCommands = () => {
     await selectAndRenderRandomPoem(ctx);
   });
 
+  /** Per-user daily poem on/off (same screen as the «شعر روزانه» main-menu button). */
+  PersianPoemsTelegramBot.addCommandEventListener("daily_poem", async (ctx) => {
+    saveAnalyticsEvent(ctx, "daily_poem_command");
+    await showDailyDigestSettings(ctx);
+  });
 };
 
 export { addDefaultCommands };
