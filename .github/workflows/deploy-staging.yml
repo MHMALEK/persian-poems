@@ -107,6 +107,11 @@ jobs:
               echo "docker pull failed (is the package public on GHCR?)"
               exit 1
             fi
+            if docker inspect persian-poems-staging >/dev/null 2>&1; then
+              echo "=== previous container: restarts=$(docker inspect -f '{{.RestartCount}}' persian-poems-staging) status=$(docker inspect -f '{{.State.Status}}' persian-poems-staging) started=$(docker inspect -f '{{.State.StartedAt}}' persian-poems-staging)"
+              docker logs --tail 60 persian-poems-staging 2>&1 || true
+              echo "=== end of previous container log"
+            fi
             docker stop persian-poems-staging 2>/dev/null || true
             docker rm persian-poems-staging 2>/dev/null || true
             if ! docker run -d \
