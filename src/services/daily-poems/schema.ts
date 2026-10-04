@@ -17,6 +17,7 @@ const DailyPoemSchema = new Schema(
       link: { type: String, required: true },
       title: { type: String, required: true },
       poetLabel: { type: String, required: true },
+      excerpt: { type: String },
     },
     createdAt: { type: Date, default: Date.now, expires: 3 * 24 * 3600 },
   },

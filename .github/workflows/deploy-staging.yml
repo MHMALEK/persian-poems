@@ -12,6 +12,7 @@
 #   ADMIN_TELEGRAM_IDS           — comma-separated user ids allowed to run /digest_now
 #   DAILY_DIGEST_HOUR_TEHRAN_STAGING, DAILY_DIGEST_MINUTE_TEHRAN_STAGING — default 08:00
 #   DAILY_DIGEST_EVERY_MINUTES_STAGING — test mode: send every N minutes instead of daily (remove when done)
+#   HEALTHCHECKS_PING_URL_STAGING, HEALTHCHECKS_DAILY_PING_URL_STAGING — heartbeat checks for the staging bot
 #
 # The container is named persian-poems-staging; the production one (persian-poems) is untouched.
 
@@ -74,13 +75,15 @@ jobs:
           DAILY_DIGEST_HOUR_TEHRAN: ${{ secrets.DAILY_DIGEST_HOUR_TEHRAN_STAGING }}
           DAILY_DIGEST_MINUTE_TEHRAN: ${{ secrets.DAILY_DIGEST_MINUTE_TEHRAN_STAGING }}
           DAILY_DIGEST_EVERY_MINUTES: ${{ secrets.DAILY_DIGEST_EVERY_MINUTES_STAGING }}
+          HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL_STAGING }}
+          HEALTHCHECKS_DAILY_PING_URL: ${{ secrets.HEALTHCHECKS_DAILY_PING_URL_STAGING }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,MONGODB_DB_NAME,DAILY_DIGEST_CHANNEL_ID,DAILY_FAL_CHANNEL_ID,ADMIN_TELEGRAM_IDS,DAILY_DIGEST_HOUR_TEHRAN,DAILY_DIGEST_MINUTE_TEHRAN,DAILY_DIGEST_EVERY_MINUTES
+          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,MONGODB_DB_NAME,DAILY_DIGEST_CHANNEL_ID,DAILY_FAL_CHANNEL_ID,ADMIN_TELEGRAM_IDS,DAILY_DIGEST_HOUR_TEHRAN,DAILY_DIGEST_MINUTE_TEHRAN,DAILY_DIGEST_EVERY_MINUTES,HEALTHCHECKS_PING_URL,HEALTHCHECKS_DAILY_PING_URL
           script: |
             set -e
             if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
@@ -96,7 +99,7 @@ jobs:
               exit 1
             fi
             E="-e TELEGRAM_BOT_TOKEN -e MONGODB_URL -e MONGODB_DB_NAME"
-            for v in DAILY_DIGEST_CHANNEL_ID DAILY_FAL_CHANNEL_ID ADMIN_TELEGRAM_IDS DAILY_DIGEST_HOUR_TEHRAN DAILY_DIGEST_MINUTE_TEHRAN DAILY_DIGEST_EVERY_MINUTES; do
+            for v in DAILY_DIGEST_CHANNEL_ID DAILY_FAL_CHANNEL_ID ADMIN_TELEGRAM_IDS DAILY_DIGEST_HOUR_TEHRAN DAILY_DIGEST_MINUTE_TEHRAN DAILY_DIGEST_EVERY_MINUTES HEALTHCHECKS_PING_URL HEALTHCHECKS_DAILY_PING_URL; do
               eval "val=\${$v:-}"
               if [ -n "$val" ]; then E="$E -e $v"; fi
             done

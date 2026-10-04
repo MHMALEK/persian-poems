@@ -11,12 +11,25 @@ import { isAdmin } from "../shared/admin";
 import { showMainMenu } from "../shared/commands";
 import { showDailyDigestSettings } from "../shared/daily-digest-settings";
 import { selectAndRenderRandomPoem } from "../shared/random-poem";
+import { buildStatsReport } from "../shared/stats";
 
 const BROADCAST_SELECTIONS: BroadcastSelection[] = ["morning", "digest", "fal", "yalda"];
+
+/** Deep link `t.me/<bot>?start=daily` lands on the daily settings instead of the main menu. */
+const START_DAILY_PARAM = "daily";
+
+function commandArg(match: unknown): string {
+  return typeof match === "string" ? match.trim() : "";
+}
 
 const addDefaultCommands = () => {
   PersianPoemsTelegramBot.addCommandEventListener("start", async (ctx) => {
     await upsertUserOnStart(ctx);
+    if (commandArg(ctx.match) === START_DAILY_PARAM) {
+      saveAnalyticsEvent(ctx, "start_daily_deeplink");
+      await showDailyDigestSettings(ctx);
+      return;
+    }
     saveAnalyticsEvent(ctx, "start");
     await showMainMenu(ctx);
   });
@@ -51,7 +64,7 @@ const addDefaultCommands = () => {
   /** Operator only (ADMIN_TELEGRAM_IDS): `/digest_now [morning|digest|fal|yalda]` runs a broadcast right away. */
   PersianPoemsTelegramBot.addCommandEventListener("digest_now", async (ctx) => {
     if (!isAdmin(ctx.from?.id)) return;
-    const arg = (typeof ctx.match === "string" ? ctx.match : "").trim();
+    const arg = commandArg(ctx.match);
     const which = (BROADCAST_SELECTIONS as string[]).includes(arg)
       ? (arg as BroadcastSelection)
       : "morning";
@@ -59,6 +72,13 @@ const addDefaultCommands = () => {
     await ctx.reply(`در حال اجرای ارسال (${which})…`);
     const summaries = await runDailyBroadcasts(PersianPoemsTelegramBot.bot, which);
     await ctx.reply(summaries.map(formatRunSummary).join("\n"));
+  });
+
+  /** Operator only: opt-in counts and the last week of events. */
+  PersianPoemsTelegramBot.addCommandEventListener("stats", async (ctx) => {
+    if (!isAdmin(ctx.from?.id)) return;
+    saveAnalyticsEvent(ctx, "stats_command");
+    await ctx.reply(await buildStatsReport());
   });
 };
 

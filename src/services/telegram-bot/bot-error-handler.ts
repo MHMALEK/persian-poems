@@ -1,4 +1,5 @@
 import { Bot, BotError, Context } from "grammy";
+import { alertAdmins } from "../admin-alerts";
 import { buildMainKeyboard } from "../../shared/main-menu-keyboard";
 
 const USER_FACING =
@@ -7,16 +8,14 @@ const USER_FACING =
 /**
  * Installs grammY `bot.catch` so a single handler failure does not stop long polling
  * (default handler calls `bot.stop()`). The same handler runs for webhook errors via
- * `bot.errorHandler` in `webhook-server.ts`.
+ * `bot.errorHandler` in `webhook-server.ts`. Admins get a rate-limited DM per error.
  */
 function installBotErrorHandler(bot: Bot<Context>): void {
   bot.catch(async (err: BotError<Context>) => {
     const cause = err.error;
-    console.error(
-      "Error in middleware while handling update",
-      err.ctx?.update?.update_id,
-      cause
-    );
+    const updateId = err.ctx?.update?.update_id;
+    console.error("Error in middleware while handling update", updateId, cause);
+    void alertAdmins(bot, "خطا در هندلر بات", cause, `update ${updateId ?? "?"}`);
 
     const ctx = err.ctx;
     try {

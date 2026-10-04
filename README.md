@@ -43,6 +43,7 @@ The schedulers are switched on server-side with `DAILY_DIGEST_ENABLED=true` (tim
 | `/random_poem` | Random poem from **any** poet in the multi-poet pool (same as the inline «یک شعر تصادفی» button) |
 | `/daily_poem`, `/daily_fal` | Daily poem / daily fal settings for yourself (same as the inline «شعر روزانه و فال حافظ» button) |
 | `/digest_now [morning\|digest\|fal\|yalda]` | Operators only (`ADMIN_TELEGRAM_IDS`): run a broadcast now |
+| `/stats` | Operators only: user counts, opt-in rates, last 7 days of events |
 
 The command menu is registered by the bot itself on every start (`setMyCommands`), so BotFather needs no manual list; `/digest_now` only appears for the admin chats.
 
@@ -60,6 +61,13 @@ Usage events are appended to the **`analytics_events`** collection (`event` name
 ### Tech notes
 
 - **Pagination** on long poem lists (inline keyboard).
+
+### Monitoring (free)
+
+- **Liveness** — with `HEALTHCHECKS_PING_URL` set, the bot pings a [Healthchecks.io](https://healthchecks.io) check every minute; when pings stop (crash, VM down, tunnel dead), Healthchecks alerts you (Telegram integration available). On a fatal error the bot pings `/fail` before exiting so the alert is immediate.
+- **Daily job** — `HEALTHCHECKS_DAILY_PING_URL` is pinged once after each morning run (`/fail` if it crashed); give that check a daily schedule with an hour of grace.
+- **Errors** — handler errors, failed sends, missing poems and crashes are DMed to `ADMIN_TELEGRAM_IDS`, at most once per distinct error every 10 minutes.
+- **`/stats`** (admins) — user counts, opt-in rates and the last week of events.
 
 ## Requirements
 
@@ -84,7 +92,8 @@ Copy `.env.example` to `.env` and fill in values. The important variables:
 | `SENTRY_DSN` | No | Enables Sentry in non-development environments. |
 | `MONGODB_DB_NAME` | No | Database name (default `persian-poems`). The staging deploy uses `persian-poems-staging`. |
 | `DAILY_DIGEST_CHANNEL_ID`, `DAILY_FAL_CHANNEL_ID` | No | Channel (`@name` or `-100…`) that also receives the daily poem / fal. Bot must be an admin there. |
-| `ADMIN_TELEGRAM_IDS` | No | Comma-separated Telegram user ids allowed to run `/digest_now`. |
+| `ADMIN_TELEGRAM_IDS` | No | Comma-separated Telegram user ids allowed to run `/digest_now` and `/stats`; they also receive error alerts. |
+| `HEALTHCHECKS_PING_URL`, `HEALTHCHECKS_DAILY_PING_URL` | No | Healthchecks.io ping URLs for liveness (every minute) and for the daily run. |
 
 ## Local development
 

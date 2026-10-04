@@ -1,10 +1,12 @@
 import cron from "node-cron";
 import { Bot, GrammyError, InlineKeyboard } from "grammy";
+import { alertAdmins, describeError } from "../services/admin-alerts";
 import {
   getOrPickDailyPoem,
   type DailyPoemKind,
   type PickedPoem,
 } from "../services/daily-poems";
+import { pingDailyDigest } from "../services/heartbeat";
 import { BotUser, deactivateUser } from "../services/users";
 import type { PoemRef } from "../services/users/poems";
 import { getBotUsername } from "../shared/bot-identity";
@@ -147,7 +149,7 @@ function channelKeyboard(poem: PoemRef, botUsername: string | undefined): Inline
   if (botUsername) {
     kb.url(SHARE_BUTTON_LABEL, buildShareUrl(poem, botUsername))
       .row()
-      .url("دریافت روزانه در ربات", `https://t.me/${botUsername}`);
+      .url("دریافت روزانه در ربات", `https://t.me/${botUsername}?start=daily`);
   }
   return kb;
 }
@@ -178,6 +180,7 @@ async function postToChannel(
     return `${channelId}: sent`;
   } catch (e) {
     console.error("daily digest: channel post failed", channelId, kind, e);
+    void alertAdmins(bot, "ارسال به کانال ناموفق", e, `${kind} → ${channelId}`);
     return `${channelId}: failed`;
   }
 }
@@ -210,13 +213,14 @@ async function broadcast(
     deactivated: 0,
     channels: [],
   };
+  const noPoemFor = new Set<string>();
 
   for (const r of recipients) {
     const poetId = poetForRecipient(kind, r);
     const picked = await cache.get(kind, poetId);
     if (!picked) {
       summary.failed += 1;
-      console.error("daily digest: no poem available", kind, poetId);
+      noPoemFor.add(poetId);
       continue;
     }
     try {
@@ -242,7 +246,16 @@ async function broadcast(
     );
   }
 
-  console.log(`daily digest: ${formatRunSummary(summary)}`);
+  const line = formatRunSummary(summary);
+  console.log(`daily digest: ${line}`);
+  if (noPoemFor.size > 0) {
+    console.error("daily digest: no poem available", kind, [...noPoemFor]);
+    void alertAdmins(bot, "شعر روزانه: شعری از گنجور نیامد", [...noPoemFor].join(", "), line);
+  }
+  const transientFailures = summary.failed - summary.deactivated - [...noPoemFor].length;
+  if (transientFailures > 0) {
+    void alertAdmins(bot, "ارسال روزانه: خطاهای ارسال", `${transientFailures} failed send(s)`, line);
+  }
   return summary;
 }
 
@@ -361,6 +374,17 @@ function perRunCacheKey(): string {
   return `${tehranDateKey()}T${new Date().toISOString().slice(11, 16)}`;
 }
 
+async function morningRun(bot: Bot, opts?: BroadcastOptions): Promise<void> {
+  try {
+    const summaries = await runDailyBroadcasts(bot, "morning", opts);
+    await pingDailyDigest(true, summaries.map(formatRunSummary).join("\n"));
+  } catch (e) {
+    console.error("daily digest: morning run crashed", e);
+    await pingDailyDigest(false, describeError(e));
+    await alertAdmins(bot, "اجرای صبحگاهی شعر روزانه خراب شد", e);
+  }
+}
+
 /**
  * Global scheduler switch: `DAILY_DIGEST_ENABLED=true` starts the crons. It
  * only decides whether the jobs run at all; who receives what is the per-user
@@ -389,10 +413,7 @@ function scheduleDailyDigest(bot: Bot): void {
   cron.schedule(
     morningCron,
     () => {
-      const opts = every ? { cacheKey: perRunCacheKey() } : undefined;
-      runDailyBroadcasts(bot, "morning", opts).catch((e) =>
-        console.error("daily digest: morning run crashed", e)
-      );
+      void morningRun(bot, every ? { cacheKey: perRunCacheKey() } : undefined);
     },
     { timezone: TEHRAN_TZ }
   );
@@ -406,9 +427,10 @@ function scheduleDailyDigest(bot: Bot): void {
     YALDA_CRON,
     () => {
       if (occasionToday() !== "yalda") return;
-      runYaldaBroadcast(bot).catch((e) =>
-        console.error("daily digest: yalda run crashed", e)
-      );
+      runYaldaBroadcast(bot).catch(async (e) => {
+        console.error("daily digest: yalda run crashed", e);
+        await alertAdmins(bot, "اجرای فال یلدا خراب شد", e);
+      });
     },
     { timezone: TEHRAN_TZ }
   );

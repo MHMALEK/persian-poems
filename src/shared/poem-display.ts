@@ -37,7 +37,8 @@ const SHARE_BUTTON_LABEL = "ارسال برای دوستان";
 /** Telegram's native share sheet: the Ganjoor link plus a short caption that carries the bot handle. */
 function buildShareUrl(poem: PoemRef, botUsername: string): string {
   const ganjoorUrl = `https://ganjoor.net${poem.link}`;
-  const text = `${poem.poetLabel} — ${poem.title}\n\n@${botUsername}`;
+  const excerpt = poem.excerpt ? `\n${poem.excerpt}` : "";
+  const text = `${poem.poetLabel} — ${poem.title}${excerpt}\n\n@${botUsername}`;
   return `https://t.me/share/url?url=${encodeURIComponent(ganjoorUrl)}&text=${encodeURIComponent(text)}`;
 }
 

@@ -14,6 +14,7 @@ const PUBLIC_COMMANDS: BotCommand[] = [
 
 const ADMIN_ONLY_COMMANDS: BotCommand[] = [
   { command: "digest_now", description: "اجرای فوری ارسال روزانه (ادمین)" },
+  { command: "stats", description: "آمار کاربران و opt-in (ادمین)" },
 ];
 
 /** Best-effort: a failure here must not stop the bot. */

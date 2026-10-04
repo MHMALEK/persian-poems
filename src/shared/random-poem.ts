@@ -15,6 +15,19 @@ const RANDOM_POEM_BACK_CALLBACK = MAIN_MENU_BACK_CALLBACK;
 
 type PickedPoem = { chunks: string[]; poem: PoemRef };
 
+const EXCERPT_MAX = 140;
+
+/** First two hemistichs as one line, for share captions. */
+function firstVerse(poemText: string): string | undefined {
+  const lines = poemText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  if (lines.length === 0) return undefined;
+  const verse = lines.slice(0, 2).join(" / ");
+  return verse.length > EXCERPT_MAX ? `${verse.slice(0, EXCERPT_MAX - 1)}…` : verse;
+}
+
 /** One random poem from one pool entry (random index path, random poem). Chunks are Telegram-safe. */
 async function pickRandomPoemForEntry(
   entry: PoetPoolEntry
@@ -42,6 +55,7 @@ async function pickRandomPoemForEntry(
     link: picked.link,
     title: picked.title,
     poetLabel: entry.labelFa,
+    excerpt: firstVerse(picked.poemText),
   };
   return { chunks, poem };
 }
