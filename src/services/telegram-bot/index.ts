@@ -31,9 +31,11 @@ class TelegramBot extends TelegramBotMenu {
     installBotErrorHandler(this.bot);
   }
 
+  /** Resolves only when polling stops; logs once the bot is up via `onStart`. */
   async startPolling(): Promise<void> {
-    await this.bot.start();
-    console.log("Bot running (long polling)");
+    await this.bot.start({
+      onStart: (me) => console.log(`Bot running (long polling) as @${me.username}`),
+    });
   }
 
   async stop(): Promise<void> {

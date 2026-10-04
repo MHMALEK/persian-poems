@@ -1,6 +1,6 @@
 import { Context, InlineKeyboard } from "grammy";
 import type { PoemRef } from "../services/users/poems";
-import { POET_POOL } from "./poet-pool";
+import { POET_POOL, type PoetPoolEntry } from "./poet-pool";
 import { fetchPoemFromIndexWithPicker } from "./poet-fetch";
 import { buildPoemActionKeyboard } from "./poem-display";
 import { buildMainKeyboard, MAIN_MENU_BACK_CALLBACK } from "./main-menu-keyboard";
@@ -13,42 +13,64 @@ import { replyPoemChunks } from "./send-poem-message";
 
 const RANDOM_POEM_BACK_CALLBACK = MAIN_MENU_BACK_CALLBACK;
 
+type PickedPoem = { chunks: string[]; poem: PoemRef };
+
+/** One random poem from one pool entry (random index path, random poem). Chunks are Telegram-safe. */
+async function pickRandomPoemForEntry(
+  entry: PoetPoolEntry
+): Promise<PickedPoem | null> {
+  const indexPath =
+    entry.indexPaths[Math.floor(Math.random() * entry.indexPaths.length)];
+  if (!indexPath) return null;
+
+  const picked = await fetchPoemFromIndexWithPicker(
+    entry.author,
+    indexPath,
+    (len) => Math.floor(Math.random() * len)
+  );
+  if (!picked) return null;
+
+  const header = `<b>${entry.labelFa}</b>\n<b>${picked.title}</b>\n\n`;
+  const bodyOnlyChunks = entry.useChunkSplit
+    ? splitMessage(picked.poemText, 150)
+    : [picked.poemText];
+  const maxBodyLen = Math.max(1, TELEGRAM_TEXT_SAFE_MAX - header.length);
+  const chunks = bodyOnlyChunks.flatMap((body) =>
+    splitTelegramText(body, maxBodyLen).map((part) => header + part)
+  );
+  const poem: PoemRef = {
+    link: picked.link,
+    title: picked.title,
+    poetLabel: entry.labelFa,
+  };
+  return { chunks, poem };
+}
+
+/** Random poem for one poet id (`PoetPoolEntry.author`), with retries. */
+async function pickRandomPoemForPoet(author: string): Promise<PickedPoem | null> {
+  const entry = POET_POOL.find((p) => p.author === author);
+  if (!entry) return null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const picked = await pickRandomPoemForEntry(entry);
+      if (picked) return picked;
+    } catch (e) {
+      console.error("random poem attempt failed", author, e);
+    }
+  }
+  return null;
+}
+
 /**
  * One random poem from {@link POET_POOL} (all poets). Chunks are Telegram-safe.
  */
-async function pickRandomPoemFromPool(): Promise<{
-  chunks: string[];
-  poem: PoemRef;
-} | null> {
+async function pickRandomPoemFromPool(): Promise<PickedPoem | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const entry = POET_POOL[Math.floor(Math.random() * POET_POOL.length)];
       if (!entry) continue;
-      const indexPath =
-        entry.indexPaths[Math.floor(Math.random() * entry.indexPaths.length)];
-      if (!indexPath) continue;
-
-      const picked = await fetchPoemFromIndexWithPicker(
-        entry.author,
-        indexPath,
-        (len) => Math.floor(Math.random() * len)
-      );
-      if (!picked) continue;
-
-      const header = `<b>${entry.labelFa}</b>\n<b>${picked.title}</b>\n\n`;
-      const bodyOnlyChunks = entry.useChunkSplit
-        ? splitMessage(picked.poemText, 150)
-        : [picked.poemText];
-      const maxBodyLen = Math.max(1, TELEGRAM_TEXT_SAFE_MAX - header.length);
-      const chunks = bodyOnlyChunks.flatMap((body) =>
-        splitTelegramText(body, maxBodyLen).map((part) => header + part)
-      );
-      const poem: PoemRef = {
-        link: picked.link,
-        title: picked.title,
-        poetLabel: entry.labelFa,
-      };
-      return { chunks, poem };
+      const picked = await pickRandomPoemForEntry(entry);
+      if (picked) return picked;
     } catch (e) {
       console.error("random poem attempt failed", e);
     }
@@ -92,6 +114,7 @@ async function selectAndRenderRandomPoem(ctx: Context): Promise<void> {
 }
 
 export {
+  pickRandomPoemForPoet,
   pickRandomPoemFromPool,
   renderRandomPoemReply,
   selectAndRenderRandomPoem,

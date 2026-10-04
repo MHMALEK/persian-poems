@@ -1,0 +1,120 @@
+# Staging bot: same VM, separate token, separate Mongo database, long polling
+# (no public URL / tunnel needed). Deploys on every push to the `staging` branch.
+#
+# Secrets (repository → Settings → Secrets and variables → Actions):
+#   TELEGRAM_BOT_TOKEN_STAGING   — the staging bot's token (required)
+#   VM_HOST, VM_USER, VM_SSH_KEY — shared with the production deploy
+#   MONGODB_URL                  — shared cluster; staging uses its own DB name (below)
+# Optional:
+#   MONGODB_URL_STAGING          — a different cluster/URI for staging
+#   MONGODB_DB_NAME_STAGING      — default persian-poems-staging
+#   DAILY_DIGEST_CHANNEL_ID_STAGING, DAILY_FAL_CHANNEL_ID_STAGING — test channels (@name or -100…), bot must be admin
+#   ADMIN_TELEGRAM_IDS           — comma-separated user ids allowed to run /digest_now
+#   DAILY_DIGEST_HOUR_TEHRAN_STAGING, DAILY_DIGEST_MINUTE_TEHRAN_STAGING — default 08:00
+#
+# The container is named persian-poems-staging; the production one (persian-poems) is untouched.
+
+name: Build and deploy (staging)
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vm-persian-poems-staging
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-deploy-staging:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image name (GHCR requires lowercase)
+        run: echo "IMAGE_NAME=${REGISTRY}/$(echo ${GITHUB_REPOSITORY} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:staging
+            ${{ env.IMAGE_NAME }}:staging-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy staging on VM
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN_STAGING }}
+          MONGODB_URL: ${{ secrets.MONGODB_URL_STAGING || secrets.MONGODB_URL }}
+          MONGODB_DB_NAME: ${{ secrets.MONGODB_DB_NAME_STAGING || 'persian-poems-staging' }}
+          DAILY_DIGEST_CHANNEL_ID: ${{ secrets.DAILY_DIGEST_CHANNEL_ID_STAGING }}
+          DAILY_FAL_CHANNEL_ID: ${{ secrets.DAILY_FAL_CHANNEL_ID_STAGING }}
+          ADMIN_TELEGRAM_IDS: ${{ secrets.ADMIN_TELEGRAM_IDS }}
+          DAILY_DIGEST_HOUR_TEHRAN: ${{ secrets.DAILY_DIGEST_HOUR_TEHRAN_STAGING }}
+          DAILY_DIGEST_MINUTE_TEHRAN: ${{ secrets.DAILY_DIGEST_MINUTE_TEHRAN_STAGING }}
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script_stop: true
+          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,MONGODB_DB_NAME,DAILY_DIGEST_CHANNEL_ID,DAILY_FAL_CHANNEL_ID,ADMIN_TELEGRAM_IDS,DAILY_DIGEST_HOUR_TEHRAN,DAILY_DIGEST_MINUTE_TEHRAN
+          script: |
+            set -e
+            if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+              echo "TELEGRAM_BOT_TOKEN_STAGING must be set (GitHub Actions secret)"
+              exit 1
+            fi
+            if [ -z "${MONGODB_URL:-}" ]; then
+              echo "MONGODB_URL (or MONGODB_URL_STAGING) must be set"
+              exit 1
+            fi
+            if [ "${MONGODB_DB_NAME}" = "persian-poems" ]; then
+              echo "Refusing to run staging against the production database name"
+              exit 1
+            fi
+            E="-e TELEGRAM_BOT_TOKEN -e MONGODB_URL -e MONGODB_DB_NAME"
+            for v in DAILY_DIGEST_CHANNEL_ID DAILY_FAL_CHANNEL_ID ADMIN_TELEGRAM_IDS DAILY_DIGEST_HOUR_TEHRAN DAILY_DIGEST_MINUTE_TEHRAN; do
+              eval "val=\${$v:-}"
+              if [ -n "$val" ]; then E="$E -e $v"; fi
+            done
+            if ! docker pull "${{ env.IMAGE_NAME }}:staging"; then
+              echo "docker pull failed (is the package public on GHCR?)"
+              exit 1
+            fi
+            docker stop persian-poems-staging 2>/dev/null || true
+            docker rm persian-poems-staging 2>/dev/null || true
+            if ! docker run -d \
+              --name persian-poems-staging \
+              --restart unless-stopped \
+              -e NODE_ENV=production \
+              -e BOT_TRANSPORT=polling \
+              -e DAILY_DIGEST_ENABLED=true \
+              $E \
+              "${{ env.IMAGE_NAME }}:staging"; then
+              echo "docker run failed"
+              exit 1
+            fi
+            sleep 8
+            docker logs --tail 20 persian-poems-staging
+            docker image prune -f || true

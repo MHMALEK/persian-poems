@@ -10,6 +10,7 @@ import { addSaadiFaCallbacks } from "./poets/saadi/fa";
 import { addNezamiFaCallbacks } from "./poets/nezami/fa";
 import { addFerdousiFaCallbacks } from "./poets/ferdousi/fa";
 import { addPoemNavCallbacks } from "./shared/poem-nav-callbacks";
+import { startHealthServer } from "./http/health-server";
 import { startWebhookServer } from "./http/webhook-server";
 import { scheduleDailyDigest } from "./jobs/daily-digest";
 
@@ -41,14 +42,16 @@ async function main() {
   addNezamiFaCallbacks();
   addFerdousiFaCallbacks();
 
+  // Before the transport: long polling (`bot.start()`) does not return until the bot stops.
+  scheduleDailyDigest(PersianPoemsTelegramBot.bot);
+
   const transport = resolveTransport();
   if (transport === "webhook") {
     await startWebhookServer(PersianPoemsTelegramBot.bot);
   } else {
+    await startHealthServer();
     await PersianPoemsTelegramBot.startPolling();
   }
-
-  scheduleDailyDigest(PersianPoemsTelegramBot.bot);
 }
 
 main().catch((err) => {

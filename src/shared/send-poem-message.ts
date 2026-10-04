@@ -51,7 +51,7 @@ async function replyPoemChunks(
 /** Send poem chunks to a chat by id (e.g. scheduled broadcast). Keyboard only on the last chunk. */
 async function sendPoemChunksToChat(
   bot: Bot,
-  chatId: number,
+  chatId: number | string,
   chunks: string[],
   keyboard: InlineKeyboard
 ): Promise<void> {

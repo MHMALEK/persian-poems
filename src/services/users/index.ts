@@ -5,9 +5,16 @@ import BotUserSchema from "./schema";
 
 const BotUser = mongoose.models.BotUser ?? mongoose.model("BotUser", BotUserSchema);
 
+export type DailySettings = {
+  dailyDigest: boolean;
+  dailyFal: boolean;
+  /** Empty = all poets. */
+  dailyPoets: string[];
+};
+
 /**
  * Create or update the user on /start. Safe to call on every start (idempotent).
- * Never touches `dailyDigest`, so re-running /start keeps the user's choice.
+ * Never touches the daily* preferences, so re-running /start keeps the user's choices.
  */
 async function upsertUserOnStart(ctx: Context): Promise<void> {
   const from = ctx.from;
@@ -61,24 +68,20 @@ async function deactivateUser(
   }
 }
 
-/** Whether the user has opted in to the daily poem. Missing row or field = off. */
-async function isDailyDigestEnabled(telegramId: number): Promise<boolean> {
-  const doc = await BotUser.findOne({ telegramId })
-    .select("dailyDigest")
-    .lean<{ dailyDigest?: boolean } | null>();
-  return doc?.dailyDigest === true;
-}
-
 /**
- * Turns the daily poem on or off for one user. Upserts so the choice sticks
- * even if the user has no row yet (e.g. they never sent /start). Throws on DB
- * failure so the caller can tell the user the change did not stick.
+ * Writes preference fields for one user. Upserts so the choice sticks even if
+ * the user has no row yet (e.g. they never sent /start); a user changing a
+ * setting is reachable, so they are reactivated too. Throws on DB failure so
+ * the caller can tell the user the change did not stick.
  */
-async function setDailyDigest(from: User, enabled: boolean): Promise<void> {
+async function upsertUserFields(
+  from: User,
+  fields: Record<string, unknown>
+): Promise<void> {
   await BotUser.updateOne(
     { telegramId: from.id },
     {
-      $set: { dailyDigest: enabled, active: true },
+      $set: { ...fields, active: true },
       $unset: { deactivatedAt: "", deactivationReason: "" },
       $setOnInsert: {
         firstName: from.first_name,
@@ -92,10 +95,42 @@ async function setDailyDigest(from: User, enabled: boolean): Promise<void> {
   );
 }
 
+/** Daily-poem preferences for one user. Missing row or fields = everything off, all poets. */
+async function getDailySettings(telegramId: number): Promise<DailySettings> {
+  const doc = await BotUser.findOne({ telegramId })
+    .select("dailyDigest dailyFal dailyPoets")
+    .lean<{ dailyDigest?: boolean; dailyFal?: boolean; dailyPoets?: string[] } | null>();
+  return {
+    dailyDigest: doc?.dailyDigest === true,
+    dailyFal: doc?.dailyFal === true,
+    dailyPoets: Array.isArray(doc?.dailyPoets) ? doc.dailyPoets : [],
+  };
+}
+
+async function isDailyDigestEnabled(telegramId: number): Promise<boolean> {
+  return (await getDailySettings(telegramId)).dailyDigest;
+}
+
+async function setDailyDigest(from: User, enabled: boolean): Promise<void> {
+  await upsertUserFields(from, { dailyDigest: enabled });
+}
+
+async function setDailyFal(from: User, enabled: boolean): Promise<void> {
+  await upsertUserFields(from, { dailyFal: enabled });
+}
+
+/** `poets` empty = all poets. */
+async function setDailyPoets(from: User, poets: string[]): Promise<void> {
+  await upsertUserFields(from, { dailyPoets: poets });
+}
+
 export {
   BotUser,
   upsertUserOnStart,
   deactivateUser,
+  getDailySettings,
   isDailyDigestEnabled,
   setDailyDigest,
+  setDailyFal,
+  setDailyPoets,
 };

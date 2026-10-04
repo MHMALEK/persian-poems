@@ -21,11 +21,17 @@ Browse by author; each poet has a Farsi menu with bios where applicable and poem
 
 - **Random poem** — picks from several poets and corpora (حافظ، خیام، مولانا، سعدی، فردوسی، نظامی) with long-text splitting where needed.
 
-### Daily poem (opt-in)
+### Daily poem and daily fal (opt-in)
 
-One random poem per day (same poem for everyone, Asia/Tehran). **Off by default for every user.** A user turns it on or off themselves from the «شعر روزانه» main-menu button or `/daily_poem`; every delivered daily poem also carries a «خاموش کردن شعر روزانه» button. The choice is stored per user in `bot_users.dailyDigest` and survives `/start`.
+**Both are off by default for every user.** A user turns them on or off from the «شعر روزانه و فال حافظ» main-menu button, `/daily_poem` or `/daily_fal`; every delivered message also carries a «خاموش کردن …» button. Choices live per user in `bot_users` (`dailyDigest`, `dailyFal`, `dailyPoets`) and survive `/start`.
 
-The scheduler itself is switched on server-side with `DAILY_DIGEST_ENABLED=true` (time via `DAILY_DIGEST_HOUR_TEHRAN` / `DAILY_DIGEST_MINUTE_TEHRAN`, default 08:00). It only sends to users with `dailyDigest: true`.
+- **Daily poem** — one random poem per day from the poets the user picked (default: all six). One poem per poet per day is cached in `daily_poems`, so everyone who picked the same poet gets the same poem and Ganjoor is fetched once per poet.
+- **Daily Hafez fal** — one ghazal per day for everyone who opted in.
+- **Occasions** — Nowruz (1 Farvardin) and Yalda (30 Azar) get a greeting line; on Yalda an extra fal goes out at 20:00 Tehran to everyone opted into either feature.
+- **Channel** — set `DAILY_DIGEST_CHANNEL_ID` / `DAILY_FAL_CHANNEL_ID` (`@name` or `-100…`, bot must be admin) to also post each day's poem / fal there.
+- **Share** — every poem carries an «ارسال برای دوستان» button (Telegram share sheet with the Ganjoor link and the bot handle).
+
+The schedulers are switched on server-side with `DAILY_DIGEST_ENABLED=true` (time via `DAILY_DIGEST_HOUR_TEHRAN` / `DAILY_DIGEST_MINUTE_TEHRAN`, default 08:00). Operators listed in `ADMIN_TELEGRAM_IDS` can run `/digest_now [morning|digest|fal|yalda]` to trigger a broadcast immediately.
 
 ### Commands
 
@@ -35,12 +41,13 @@ The scheduler itself is switched on server-side with `DAILY_DIGEST_ENABLED=true`
 | `/poem` | Random **Hafez** ghazal |
 | `/fal` | Same as `/poem` (فال-style) |
 | `/random_poem` | Random poem from **any** poet in the multi-poet pool (same as the inline «یک شعر تصادفی» button) |
-| `/daily_poem` | Turn the daily poem on or off for yourself (same as the inline «شعر روزانه» button) |
+| `/daily_poem`, `/daily_fal` | Daily poem / daily fal settings for yourself (same as the inline «شعر روزانه و فال حافظ» button) |
+| `/digest_now [morning\|digest\|fal\|yalda]` | Operators only (`ADMIN_TELEGRAM_IDS`): run a broadcast now |
 
 ### Main menu shortcuts (buttons)
 
 - One **random** poem (multi-poet pool)
-- **Daily poem** on/off screen (per-user opt-in, default off)
+- **Daily poem / daily fal** settings (per-user opt-in, default off, poet picker)
 
 Each poem view includes a link to the same text on **ganjoor.net** and a back button.
 
@@ -73,6 +80,9 @@ Copy `.env.example` to `.env` and fill in values. The important variables:
 | `PUBLISH_PORT` | No | **Docker Compose only:** host port mapped to the app (default **`3002`**). GitHub deploy uses `3002` on the VM. |
 | `BOT_TRANSPORT` | No | `polling` or `webhook`. Default: **polling** in development, **webhook** when `NODE_ENV=production`. |
 | `SENTRY_DSN` | No | Enables Sentry in non-development environments. |
+| `MONGODB_DB_NAME` | No | Database name (default `persian-poems`). The staging deploy uses `persian-poems-staging`. |
+| `DAILY_DIGEST_CHANNEL_ID`, `DAILY_FAL_CHANNEL_ID` | No | Channel (`@name` or `-100…`) that also receives the daily poem / fal. Bot must be an admin there. |
+| `ADMIN_TELEGRAM_IDS` | No | Comma-separated Telegram user ids allowed to run `/digest_now`. |
 
 ## Local development
 
@@ -128,6 +138,7 @@ The image sets `NODE_ENV=production` and `BOT_TRANSPORT=webhook` by default. For
 |----------|------|--------------|
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Pull requests to `main` / `master` | `npm ci` + `npm run build` |
 | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Push to `main` / `master`, or **Run workflow** | Build & push image to **GHCR**, then **SSH** deploy to your VM |
+| [`.github/workflows/deploy-staging.yml`](.github/workflows/deploy-staging.yml) | Push to `staging`, or **Run workflow** | Same, but to the `persian-poems-staging` container: its own bot token (`TELEGRAM_BOT_TOKEN_STAGING`), its own database (`persian-poems-staging`), long polling, no public URL |
 
 ### Deploy secrets (repository → **Settings → Secrets and variables → Actions**)
 
@@ -138,7 +149,9 @@ Required for `deploy.yml`:
 - `WEBHOOK_URL`  
 - `MONGODB_URL` **or** `DATABASE_URL` (Mongo URI)
 
-Optional: `TELEGRAM_WEBHOOK_SECRET`, `DAILY_DIGEST_ENABLED` (`true` starts the daily poem scheduler; recipients are opt-in users only), `DAILY_DIGEST_HOUR_TEHRAN`, `DAILY_DIGEST_MINUTE_TEHRAN`
+Optional: `TELEGRAM_WEBHOOK_SECRET`, `DAILY_DIGEST_ENABLED` (`true` starts the daily poem / fal schedulers; recipients are opt-in users only), `DAILY_DIGEST_HOUR_TEHRAN`, `DAILY_DIGEST_MINUTE_TEHRAN`, `DAILY_DIGEST_CHANNEL_ID`, `DAILY_FAL_CHANNEL_ID`, `ADMIN_TELEGRAM_IDS`, `MONGODB_DB_NAME`
+
+Staging (`deploy-staging.yml`): `TELEGRAM_BOT_TOKEN_STAGING` (required) plus the shared `VM_*` and `MONGODB_URL`; optional `MONGODB_URL_STAGING`, `MONGODB_DB_NAME_STAGING`, `DAILY_DIGEST_CHANNEL_ID_STAGING`, `DAILY_FAL_CHANNEL_ID_STAGING`, `DAILY_DIGEST_HOUR_TEHRAN_STAGING`, `DAILY_DIGEST_MINUTE_TEHRAN_STAGING`.
 
 After the first successful publish, open **GitHub → Packages → this container image → Package settings** and set visibility to **Public** so the VM can `docker pull` without logging in to GHCR (same pattern as a typical small VPS deploy).
 

@@ -2,9 +2,17 @@ import { selectAndRenderRandomGhazal } from "../poets/hafez/fa";
 import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
 import { upsertUserOnStart } from "../services/users";
+import {
+  formatRunSummary,
+  runDailyBroadcasts,
+  type BroadcastSelection,
+} from "../jobs/daily-digest";
+import { isAdmin } from "../shared/admin";
 import { showMainMenu } from "../shared/commands";
 import { showDailyDigestSettings } from "../shared/daily-digest-settings";
 import { selectAndRenderRandomPoem } from "../shared/random-poem";
+
+const BROADCAST_SELECTIONS: BroadcastSelection[] = ["morning", "digest", "fal", "yalda"];
 
 const addDefaultCommands = () => {
   PersianPoemsTelegramBot.addCommandEventListener("start", async (ctx) => {
@@ -29,10 +37,28 @@ const addDefaultCommands = () => {
     await selectAndRenderRandomPoem(ctx);
   });
 
-  /** Per-user daily poem on/off (same screen as the «شعر روزانه» main-menu button). */
+  /** Per-user daily poem / fal on-off (same screen as the main-menu button). */
   PersianPoemsTelegramBot.addCommandEventListener("daily_poem", async (ctx) => {
     saveAnalyticsEvent(ctx, "daily_poem_command");
     await showDailyDigestSettings(ctx);
+  });
+
+  PersianPoemsTelegramBot.addCommandEventListener("daily_fal", async (ctx) => {
+    saveAnalyticsEvent(ctx, "daily_fal_command");
+    await showDailyDigestSettings(ctx);
+  });
+
+  /** Operator only (ADMIN_TELEGRAM_IDS): `/digest_now [morning|digest|fal|yalda]` runs a broadcast right away. */
+  PersianPoemsTelegramBot.addCommandEventListener("digest_now", async (ctx) => {
+    if (!isAdmin(ctx.from?.id)) return;
+    const arg = (typeof ctx.match === "string" ? ctx.match : "").trim();
+    const which = (BROADCAST_SELECTIONS as string[]).includes(arg)
+      ? (arg as BroadcastSelection)
+      : "morning";
+    saveAnalyticsEvent(ctx, "digest_now_command", { which });
+    await ctx.reply(`در حال اجرای ارسال (${which})…`);
+    const summaries = await runDailyBroadcasts(PersianPoemsTelegramBot.bot, which);
+    await ctx.reply(summaries.map(formatRunSummary).join("\n"));
   });
 };
 

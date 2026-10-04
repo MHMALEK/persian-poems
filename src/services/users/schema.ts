@@ -34,6 +34,10 @@ const BotUserSchema = new Schema(
      * Documents without the field (users from before the opt-in) count as off.
      */
     dailyDigest: { type: Boolean, default: false, index: true },
+    /** Poet ids (POET_POOL authors) the daily poem is drawn from. Empty/missing = all poets. */
+    dailyPoets: { type: [String], default: undefined },
+    /** Per-user opt-in for the daily Hafez fal. Off by default. */
+    dailyFal: { type: Boolean, default: false, index: true },
     /** Extensible store for future bot preferences. */
     preferences: { type: Schema.Types.Mixed, default: {} },
   },

@@ -4,6 +4,8 @@ import { type PoemRef } from "../services/users/poems";
 import {
   DAILY_DIGEST_OFF_BUTTON_LABEL,
   DAILY_DIGEST_OFF_INLINE_CALLBACK,
+  DAILY_FAL_OFF_BUTTON_LABEL,
+  DAILY_FAL_OFF_INLINE_CALLBACK,
 } from "./daily-digest-callbacks";
 
 export type PoemListNav = {
@@ -22,9 +24,22 @@ export type BuildPoemKeyboardOptions = {
   poolActions?: boolean;
   /** زیر شعر روزانه: یک ردیف «خاموش کردن شعر روزانه». */
   dailyDigestActions?: boolean;
+  /** زیر فال روزانه: یک ردیف «خاموش کردن فال روزانه». */
+  dailyFalActions?: boolean;
   /** برای ارسال زمان‌بندی‌شده بدون ctx معمولی. */
   actorUserId?: number;
+  /** For the share button when there is no ctx (scheduled sends); from ctx.me otherwise. */
+  botUsername?: string;
 };
+
+const SHARE_BUTTON_LABEL = "ارسال برای دوستان";
+
+/** Telegram's native share sheet: the Ganjoor link plus a short caption that carries the bot handle. */
+function buildShareUrl(poem: PoemRef, botUsername: string): string {
+  const ganjoorUrl = `https://ganjoor.net${poem.link}`;
+  const text = `${poem.poetLabel} — ${poem.title}\n\n@${botUsername}`;
+  return `https://t.me/share/url?url=${encodeURIComponent(ganjoorUrl)}&text=${encodeURIComponent(text)}`;
+}
 
 async function buildPoemActionKeyboard(
   ctx: Context | undefined,
@@ -35,6 +50,11 @@ async function buildPoemActionKeyboard(
   const kb = new InlineKeyboard()
     .url("مطالعه در وبسایت گنجور", `https://ganjoor.net${poem.link}`)
     .row();
+
+  const botUsername = options?.botUsername ?? ctx?.me?.username;
+  if (botUsername) {
+    kb.url(SHARE_BUTTON_LABEL, buildShareUrl(poem, botUsername)).row();
+  }
 
   const nav = options?.listNav;
   if (nav && nav.listLength > 1) {
@@ -65,9 +85,13 @@ async function buildPoemActionKeyboard(
     kb.text(DAILY_DIGEST_OFF_BUTTON_LABEL, DAILY_DIGEST_OFF_INLINE_CALLBACK).row();
   }
 
+  if (options?.dailyFalActions) {
+    kb.text(DAILY_FAL_OFF_BUTTON_LABEL, DAILY_FAL_OFF_INLINE_CALLBACK).row();
+  }
+
   kb.text("بازگشت", backCallbackData);
 
   return kb;
 }
 
-export { buildPoemActionKeyboard };
+export { buildPoemActionKeyboard, buildShareUrl, SHARE_BUTTON_LABEL };

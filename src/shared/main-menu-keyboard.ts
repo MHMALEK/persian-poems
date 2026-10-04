@@ -21,7 +21,7 @@ function buildMainKeyboard(): InlineKeyboard {
     keyboard.text(poet.title, `select_poet_fa:${poet.id}`).row();
   });
   keyboard.text("یک شعر تصادفی برایم بیاور", "random_poem_fa").row();
-  keyboard.text("شعر روزانه (روشن / خاموش)", DAILY_DIGEST_MENU_CALLBACK).row();
+  keyboard.text("شعر روزانه و فال حافظ", DAILY_DIGEST_MENU_CALLBACK).row();
   return keyboard;
 }
 

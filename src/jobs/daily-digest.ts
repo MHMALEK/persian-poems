@@ -1,19 +1,47 @@
 import cron from "node-cron";
-import { Bot, GrammyError } from "grammy";
+import { Bot, GrammyError, InlineKeyboard } from "grammy";
+import {
+  getOrPickDailyPoem,
+  type DailyPoemKind,
+  type PickedPoem,
+} from "../services/daily-poems";
 import { BotUser, deactivateUser } from "../services/users";
 import type { PoemRef } from "../services/users/poems";
-import { buildPoemActionKeyboard } from "../shared/poem-display";
+import { getBotUsername } from "../shared/bot-identity";
+import { buildPoemActionKeyboard, buildShareUrl, SHARE_BUTTON_LABEL } from "../shared/poem-display";
+import { POET_POOL } from "../shared/poet-pool";
 import {
-  pickRandomPoemFromPool,
+  pickRandomPoemForPoet,
   RANDOM_POEM_BACK_CALLBACK,
 } from "../shared/random-poem";
 import { sendPoemChunksToChat } from "../shared/send-poem-message";
+import { occasionToday, tehranDateKey, TEHRAN_TZ, type Occasion } from "../shared/tehran-date";
 
-const INTRO_HTML =
-  "🌅 <b>شعر روزانه</b>\nیک شعر تصادفی از شاعران گنجور برای شما.";
+const ALL_POET_IDS = POET_POOL.map((p) => p.author);
+const HAFEZ = "hafez";
+/** Yalda is an evening occasion; the special fal goes out at this Tehran hour on 30 Azar. */
+const YALDA_CRON = "0 20 * * *";
+
+type Recipient = { telegramId: number; dailyPoets?: string[] };
+
+export type RunSummary = {
+  kind: DailyPoemKind;
+  dateKey: string;
+  recipients: number;
+  ok: number;
+  failed: number;
+  deactivated: number;
+  channels: string[];
+};
+
+export type BroadcastSelection = "morning" | "digest" | "fal" | "yalda";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function pickOne<T>(items: readonly T[]): T | undefined {
+  return items[Math.floor(Math.random() * items.length)];
 }
 
 /**
@@ -33,63 +61,236 @@ function unreachableUserReason(e: unknown): string | null {
   return null;
 }
 
-async function sendDigestToUser(
+function occasionLine(occasion: Occasion | null): string {
+  if (occasion === "nowruz") return "🌸 <b>نوروز مبارک!</b>\n\n";
+  if (occasion === "yalda") return "🍉 <b>یلدا مبارک!</b>\n\n";
+  return "";
+}
+
+function introHtml(
+  kind: DailyPoemKind,
+  poetLabel: string,
+  occasion: Occasion | null
+): string {
+  switch (kind) {
+    case "digest":
+      return `${occasionLine(occasion)}🌅 <b>شعر روزانه</b>\nیک شعر از ${poetLabel} برای امروز.`;
+    case "fal":
+      return `${occasionLine(occasion)}🔮 <b>فال امروز حافظ</b>\nنیت کنید و بخوانید.`;
+    case "yalda":
+      return "🍉 <b>فال شب یلدا</b>\nشب یلدا مبارک. نیت کنید و بخوانید.";
+  }
+}
+
+/** One Ganjoor fetch per (kind, poet) per run; the DB cache makes it one per day across restarts. */
+class DailyPoemCache {
+  private readonly memo = new Map<string, Promise<PickedPoem | null>>();
+
+  constructor(private readonly dateKey: string) {}
+
+  get(kind: DailyPoemKind, poetId: string): Promise<PickedPoem | null> {
+    const key = `${kind}:${poetId}`;
+    let pending = this.memo.get(key);
+    if (!pending) {
+      pending = getOrPickDailyPoem(this.dateKey, kind, poetId, () =>
+        pickRandomPoemForPoet(poetId)
+      );
+      this.memo.set(key, pending);
+    }
+    return pending;
+  }
+}
+
+function poetForRecipient(kind: DailyPoemKind, r: Recipient): string {
+  if (kind !== "digest") return HAFEZ;
+  const chosen = (r.dailyPoets ?? []).filter((p) => ALL_POET_IDS.includes(p));
+  return pickOne(chosen.length ? chosen : ALL_POET_IDS) ?? HAFEZ;
+}
+
+async function sendToUser(
   bot: Bot,
-  telegramId: number,
-  chunks: string[],
-  poem: PoemRef
+  r: Recipient,
+  kind: DailyPoemKind,
+  picked: PickedPoem,
+  occasion: Occasion | null,
+  botUsername: string | undefined
 ): Promise<void> {
   const keyboard = await buildPoemActionKeyboard(
     undefined,
-    poem,
+    picked.poem,
     RANDOM_POEM_BACK_CALLBACK,
-    { actorUserId: telegramId, dailyDigestActions: true }
+    {
+      actorUserId: r.telegramId,
+      dailyDigestActions: kind === "digest",
+      dailyFalActions: kind !== "digest",
+      botUsername,
+    }
   );
-  await bot.api.sendMessage(telegramId, INTRO_HTML, { parse_mode: "HTML" });
-  await sendPoemChunksToChat(bot, telegramId, chunks, keyboard);
+  await bot.api.sendMessage(
+    r.telegramId,
+    introHtml(kind, picked.poem.poetLabel, occasion),
+    { parse_mode: "HTML" }
+  );
+  await sendPoemChunksToChat(bot, r.telegramId, picked.chunks, keyboard);
 }
 
-/**
- * Picks one random poem (from the full poet pool) and sends it to every user
- * who has opted in (`dailyDigest: true`) and is still reachable (`active` not
- * false). Users who have blocked the bot are deactivated so future runs skip them.
- */
-async function runDailyDigestBroadcast(bot: Bot): Promise<void> {
-  const picked = await pickRandomPoemFromPool();
-  if (!picked) {
-    console.error("daily digest: pickRandomPoemFromPool returned null");
-    return;
+/** Channel posts get links only: callback buttons would try to edit the post into a menu. */
+function channelKeyboard(poem: PoemRef, botUsername: string | undefined): InlineKeyboard {
+  const kb = new InlineKeyboard()
+    .url("مطالعه در وبسایت گنجور", `https://ganjoor.net${poem.link}`)
+    .row();
+  if (botUsername) {
+    kb.url(SHARE_BUTTON_LABEL, buildShareUrl(poem, botUsername))
+      .row()
+      .url("دریافت روزانه در ربات", `https://t.me/${botUsername}`);
   }
+  return kb;
+}
 
-  const { chunks, poem } = picked;
-  const users = await BotUser.find({ dailyDigest: true, active: { $ne: false } })
-    .select("telegramId")
-    .lean<{ telegramId: number }[]>();
+async function postToChannel(
+  bot: Bot,
+  channelId: string,
+  kind: DailyPoemKind,
+  cache: DailyPoemCache,
+  occasion: Occasion | null,
+  botUsername: string | undefined
+): Promise<string> {
+  const poetId = kind === "digest" ? pickOne(ALL_POET_IDS) ?? HAFEZ : HAFEZ;
+  const picked = await cache.get(kind, poetId);
+  if (!picked) return `${channelId}: no-poem`;
+  try {
+    await bot.api.sendMessage(
+      channelId,
+      introHtml(kind, picked.poem.poetLabel, occasion),
+      { parse_mode: "HTML" }
+    );
+    await sendPoemChunksToChat(
+      bot,
+      channelId,
+      picked.chunks,
+      channelKeyboard(picked.poem, botUsername)
+    );
+    return `${channelId}: sent`;
+  } catch (e) {
+    console.error("daily digest: channel post failed", channelId, kind, e);
+    return `${channelId}: failed`;
+  }
+}
 
-  let ok = 0;
-  let failed = 0;
-  let deactivated = 0;
-  for (const u of users) {
-    const tid = u.telegramId;
+function channelIdsFromEnv(...names: string[]): string[] {
+  const ids = names
+    .map((n) => process.env[n]?.trim() ?? "")
+    .filter((v) => v.length > 0);
+  return [...new Set(ids)];
+}
+
+async function broadcast(
+  bot: Bot,
+  kind: DailyPoemKind,
+  recipients: Recipient[],
+  channelIds: string[]
+): Promise<RunSummary> {
+  const dateKey = tehranDateKey();
+  const occasion = kind === "yalda" ? "yalda" : occasionToday();
+  const cache = new DailyPoemCache(dateKey);
+  const botUsername = await getBotUsername(bot);
+
+  const summary: RunSummary = {
+    kind,
+    dateKey,
+    recipients: recipients.length,
+    ok: 0,
+    failed: 0,
+    deactivated: 0,
+    channels: [],
+  };
+
+  for (const r of recipients) {
+    const poetId = poetForRecipient(kind, r);
+    const picked = await cache.get(kind, poetId);
+    if (!picked) {
+      summary.failed += 1;
+      console.error("daily digest: no poem available", kind, poetId);
+      continue;
+    }
     try {
-      await sendDigestToUser(bot, tid, chunks, poem);
-      ok += 1;
+      await sendToUser(bot, r, kind, picked, occasion, botUsername);
+      summary.ok += 1;
     } catch (e) {
-      failed += 1;
+      summary.failed += 1;
       const reason = unreachableUserReason(e);
       if (reason) {
-        await deactivateUser(tid, reason);
-        deactivated += 1;
-        console.warn("daily digest: deactivated unreachable user", tid, reason);
+        await deactivateUser(r.telegramId, reason);
+        summary.deactivated += 1;
+        console.warn("daily digest: deactivated unreachable user", r.telegramId, reason);
       } else {
-        console.error("daily digest: send failed", tid, e);
+        console.error("daily digest: send failed", r.telegramId, e);
       }
     }
     await delay(55);
   }
-  console.log(
-    `daily digest: finished recipients=${users.length} ok=${ok} failed=${failed} deactivated=${deactivated}`
+
+  for (const channelId of channelIds) {
+    summary.channels.push(
+      await postToChannel(bot, channelId, kind, cache, occasion, botUsername)
+    );
+  }
+
+  console.log(`daily digest: ${formatRunSummary(summary)}`);
+  return summary;
+}
+
+function formatRunSummary(s: RunSummary): string {
+  const channels = s.channels.length ? s.channels.join(", ") : "off";
+  return `${s.kind} ${s.dateKey}: recipients=${s.recipients} ok=${s.ok} failed=${s.failed} deactivated=${s.deactivated} channels=[${channels}]`;
+}
+
+const REACHABLE = { active: { $ne: false } };
+
+async function runDailyDigestBroadcast(bot: Bot): Promise<RunSummary> {
+  const recipients = await BotUser.find({ dailyDigest: true, ...REACHABLE })
+    .select("telegramId dailyPoets")
+    .lean<Recipient[]>();
+  return broadcast(bot, "digest", recipients, channelIdsFromEnv("DAILY_DIGEST_CHANNEL_ID"));
+}
+
+async function runDailyFalBroadcast(bot: Bot): Promise<RunSummary> {
+  const recipients = await BotUser.find({ dailyFal: true, ...REACHABLE })
+    .select("telegramId")
+    .lean<Recipient[]>();
+  return broadcast(bot, "fal", recipients, channelIdsFromEnv("DAILY_FAL_CHANNEL_ID"));
+}
+
+/** Everyone opted into anything gets the Yalda fal; both channels too. */
+async function runYaldaBroadcast(bot: Bot): Promise<RunSummary> {
+  const recipients = await BotUser.find({
+    $or: [{ dailyDigest: true }, { dailyFal: true }],
+    ...REACHABLE,
+  })
+    .select("telegramId")
+    .lean<Recipient[]>();
+  return broadcast(
+    bot,
+    "yalda",
+    recipients,
+    channelIdsFromEnv("DAILY_FAL_CHANNEL_ID", "DAILY_DIGEST_CHANNEL_ID")
   );
+}
+
+async function runDailyBroadcasts(
+  bot: Bot,
+  which: BroadcastSelection
+): Promise<RunSummary[]> {
+  switch (which) {
+    case "digest":
+      return [await runDailyDigestBroadcast(bot)];
+    case "fal":
+      return [await runDailyFalBroadcast(bot)];
+    case "yalda":
+      return [await runYaldaBroadcast(bot)];
+    case "morning":
+      return [await runDailyDigestBroadcast(bot), await runDailyFalBroadcast(bot)];
+  }
 }
 
 /**
@@ -113,9 +314,10 @@ function getDailyDigestSchedule(): { hour: number; minute: number } | null {
 }
 
 /**
- * Global scheduler switch: `DAILY_DIGEST_ENABLED=true` starts the cron. It
- * only decides whether the job runs at all; who receives the poem is the
- * per-user `dailyDigest` opt-in (see runDailyDigestBroadcast).
+ * Global scheduler switch: `DAILY_DIGEST_ENABLED=true` starts the crons. It
+ * only decides whether the jobs run at all; who receives what is the per-user
+ * `dailyDigest` / `dailyFal` opt-in. Call before long polling starts
+ * (`bot.start()` does not return until the bot stops).
  */
 function scheduleDailyDigest(bot: Bot): void {
   const enabled = process.env.DAILY_DIGEST_ENABLED === "true";
@@ -132,18 +334,39 @@ function scheduleDailyDigest(bot: Bot): void {
     return;
   }
 
-  const cronExpr = `${schedule.minute} ${schedule.hour} * * *`;
+  const morningCron = `${schedule.minute} ${schedule.hour} * * *`;
   cron.schedule(
-    cronExpr,
+    morningCron,
     () => {
-      void runDailyDigestBroadcast(bot);
+      runDailyBroadcasts(bot, "morning").catch((e) =>
+        console.error("daily digest: morning run crashed", e)
+      );
     },
-    { timezone: "Asia/Tehran" }
+    { timezone: TEHRAN_TZ }
+  );
+
+  cron.schedule(
+    YALDA_CRON,
+    () => {
+      if (occasionToday() !== "yalda") return;
+      runYaldaBroadcast(bot).catch((e) =>
+        console.error("daily digest: yalda run crashed", e)
+      );
+    },
+    { timezone: TEHRAN_TZ }
   );
 
   console.log(
-    `daily digest: scheduled (${cronExpr}, Asia/Tehran) — opted-in users only, same random poem for all`
+    `daily digest: scheduled (${morningCron} poem+fal, ${YALDA_CRON} yalda-only, ${TEHRAN_TZ}) — opted-in users only`
   );
 }
 
-export { getDailyDigestSchedule, runDailyDigestBroadcast, scheduleDailyDigest };
+export {
+  formatRunSummary,
+  getDailyDigestSchedule,
+  runDailyBroadcasts,
+  runDailyDigestBroadcast,
+  runDailyFalBroadcast,
+  runYaldaBroadcast,
+  scheduleDailyDigest,
+};

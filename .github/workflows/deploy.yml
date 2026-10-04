@@ -10,6 +10,9 @@
 #   users who opted in themselves (bot_users.dailyDigest, default off), not everyone.
 #   DAILY_DIGEST_HOUR_TEHRAN — default 8 if omitted
 #   DAILY_DIGEST_MINUTE_TEHRAN — default 0 if omitted
+#   DAILY_DIGEST_CHANNEL_ID / DAILY_FAL_CHANNEL_ID — also post the daily poem / fal to a channel (bot must be admin)
+#   ADMIN_TELEGRAM_IDS — comma-separated user ids allowed to run /digest_now
+#   MONGODB_DB_NAME — default persian-poems
 #
 # Container listens on 3000; VM maps host port 3002 → 3000 (reverse proxy to http://127.0.0.1:3002).
 #
@@ -75,13 +78,17 @@ jobs:
           DAILY_DIGEST_ENABLED: ${{ secrets.DAILY_DIGEST_ENABLED }}
           DAILY_DIGEST_HOUR_TEHRAN: ${{ secrets.DAILY_DIGEST_HOUR_TEHRAN }}
           DAILY_DIGEST_MINUTE_TEHRAN: ${{ secrets.DAILY_DIGEST_MINUTE_TEHRAN }}
+          DAILY_DIGEST_CHANNEL_ID: ${{ secrets.DAILY_DIGEST_CHANNEL_ID }}
+          DAILY_FAL_CHANNEL_ID: ${{ secrets.DAILY_FAL_CHANNEL_ID }}
+          ADMIN_TELEGRAM_IDS: ${{ secrets.ADMIN_TELEGRAM_IDS }}
+          MONGODB_DB_NAME: ${{ secrets.MONGODB_DB_NAME }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,DATABASE_URL,WEBHOOK_URL,BOT_WEBHOOK_EXTERNAL,TELEGRAM_WEBHOOK_SECRET,DAILY_DIGEST_ENABLED,DAILY_DIGEST_HOUR_TEHRAN,DAILY_DIGEST_MINUTE_TEHRAN
+          envs: TELEGRAM_BOT_TOKEN,MONGODB_URL,DATABASE_URL,WEBHOOK_URL,BOT_WEBHOOK_EXTERNAL,TELEGRAM_WEBHOOK_SECRET,DAILY_DIGEST_ENABLED,DAILY_DIGEST_HOUR_TEHRAN,DAILY_DIGEST_MINUTE_TEHRAN,DAILY_DIGEST_CHANNEL_ID,DAILY_FAL_CHANNEL_ID,ADMIN_TELEGRAM_IDS,MONGODB_DB_NAME
           script: |
             set -e
             if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
@@ -107,6 +114,10 @@ jobs:
             if [ -n "${DAILY_DIGEST_ENABLED:-}" ]; then E="$E -e DAILY_DIGEST_ENABLED"; fi
             if [ -n "${DAILY_DIGEST_HOUR_TEHRAN:-}" ]; then E="$E -e DAILY_DIGEST_HOUR_TEHRAN"; fi
             if [ -n "${DAILY_DIGEST_MINUTE_TEHRAN:-}" ]; then E="$E -e DAILY_DIGEST_MINUTE_TEHRAN"; fi
+            if [ -n "${DAILY_DIGEST_CHANNEL_ID:-}" ]; then E="$E -e DAILY_DIGEST_CHANNEL_ID"; fi
+            if [ -n "${DAILY_FAL_CHANNEL_ID:-}" ]; then E="$E -e DAILY_FAL_CHANNEL_ID"; fi
+            if [ -n "${ADMIN_TELEGRAM_IDS:-}" ]; then E="$E -e ADMIN_TELEGRAM_IDS"; fi
+            if [ -n "${MONGODB_DB_NAME:-}" ]; then E="$E -e MONGODB_DB_NAME"; fi
             # Public GHCR image: anonymous pull on the VPS (no docker login).
             if ! docker pull "${{ env.IMAGE_NAME }}:latest"; then
               echo "docker pull failed (is the package public on GHCR?)"
