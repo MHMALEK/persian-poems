@@ -2,6 +2,7 @@ import connectToDB from "./services/db";
 import PersianPoemsTelegramBot from "./services/telegram-bot";
 import { addHafezFaCallbacks } from "./poets/hafez/fa";
 import { addDefaultCommands } from "./commands";
+import { addOpsTestCommand } from "./shared/ops-test";
 import { addSelectPoetCallbacks } from "./shared/commands";
 import { addDailyDigestCallbacks } from "./shared/daily-digest-settings";
 import { addkhayamFaCallbacks } from "./poets/khayyam/fa";
@@ -51,6 +52,7 @@ async function main() {
   await connectToDB(resolveMongoUrl());
 
   addDefaultCommands();
+  addOpsTestCommand();
   addSelectPoetCallbacks();
   addDailyDigestCallbacks();
   addPoemNavCallbacks();

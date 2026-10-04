@@ -115,6 +115,7 @@ jobs:
               -e NODE_ENV=production \
               -e BOT_TRANSPORT=polling \
               -e DAILY_DIGEST_ENABLED=true \
+              -e OPS_TEST_COMMANDS=true \
               $E \
               "${{ env.IMAGE_NAME }}:staging"; then
               echo "docker run failed"

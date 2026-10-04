@@ -44,6 +44,7 @@ The schedulers are switched on server-side with `DAILY_DIGEST_ENABLED=true` (tim
 | `/daily_poem`, `/daily_fal` | Daily poem / daily fal settings for yourself (same as the inline «شعر روزانه و فال حافظ» button) |
 | `/digest_now [morning\|digest\|fal\|yalda]` | Operators only (`ADMIN_TELEGRAM_IDS`): run a broadcast now |
 | `/stats` | Operators only: user counts, opt-in rates, last 7 days of events |
+| `/ops_test <handler_error\|rejection\|exception\|daily_fail\|alert>` | Operators only, staging only (`OPS_TEST_COMMANDS=true`): trigger a failure scenario to verify alerts and recovery |
 
 The command menu is registered by the bot itself on every start (`setMyCommands`), so BotFather needs no manual list; `/digest_now` only appears for the admin chats.
 
