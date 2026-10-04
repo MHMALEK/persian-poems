@@ -36,6 +36,12 @@ export type RunSummary = {
 
 export type BroadcastSelection = "morning" | "digest" | "fal" | "yalda";
 
+type BroadcastOptions = {
+  /** Cache key instead of the Tehran day; interval mode passes one per run so every run picks fresh poems. */
+  cacheKey?: string;
+};
+| "digest" | "fal" | "yalda";
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -188,9 +194,10 @@ async function broadcast(
   bot: Bot,
   kind: DailyPoemKind,
   recipients: Recipient[],
-  channelIds: string[]
+  channelIds: string[],
+  opts?: BroadcastOptions
 ): Promise<RunSummary> {
-  const dateKey = tehranDateKey();
+  const dateKey = opts?.cacheKey ?? tehranDateKey();
   const occasion = kind === "yalda" ? "yalda" : occasionToday();
   const cache = new DailyPoemCache(dateKey);
   const botUsername = await getBotUsername(bot);
@@ -247,22 +254,43 @@ function formatRunSummary(s: RunSummary): string {
 
 const REACHABLE = { active: { $ne: false } };
 
-async function runDailyDigestBroadcast(bot: Bot): Promise<RunSummary> {
+async function runDailyDigestBroadcast(
+  bot: Bot,
+  opts?: BroadcastOptions
+): Promise<RunSummary> {
   const recipients = await BotUser.find({ dailyDigest: true, ...REACHABLE })
     .select("telegramId dailyPoets")
     .lean<Recipient[]>();
-  return broadcast(bot, "digest", recipients, channelIdsFromEnv("DAILY_DIGEST_CHANNEL_ID"));
+  return broadcast(
+    bot,
+    "digest",
+    recipients,
+    channelIdsFromEnv("DAILY_DIGEST_CHANNEL_ID"),
+    opts
+  );
 }
 
-async function runDailyFalBroadcast(bot: Bot): Promise<RunSummary> {
+async function runDailyFalBroadcast(
+  bot: Bot,
+  opts?: BroadcastOptions
+): Promise<RunSummary> {
   const recipients = await BotUser.find({ dailyFal: true, ...REACHABLE })
     .select("telegramId")
     .lean<Recipient[]>();
-  return broadcast(bot, "fal", recipients, channelIdsFromEnv("DAILY_FAL_CHANNEL_ID"));
+  return broadcast(
+    bot,
+    "fal",
+    recipients,
+    channelIdsFromEnv("DAILY_FAL_CHANNEL_ID"),
+    opts
+  );
 }
 
 /** Everyone opted into anything gets the Yalda fal; both channels too. */
-async function runYaldaBroadcast(bot: Bot): Promise<RunSummary> {
+async function runYaldaBroadcast(
+  bot: Bot,
+  opts?: BroadcastOptions
+): Promise<RunSummary> {
   const recipients = await BotUser.find({
     $or: [{ dailyDigest: true }, { dailyFal: true }],
     ...REACHABLE,
@@ -273,23 +301,28 @@ async function runYaldaBroadcast(bot: Bot): Promise<RunSummary> {
     bot,
     "yalda",
     recipients,
-    channelIdsFromEnv("DAILY_FAL_CHANNEL_ID", "DAILY_DIGEST_CHANNEL_ID")
+    channelIdsFromEnv("DAILY_FAL_CHANNEL_ID", "DAILY_DIGEST_CHANNEL_ID"),
+    opts
   );
 }
 
 async function runDailyBroadcasts(
   bot: Bot,
-  which: BroadcastSelection
+  which: BroadcastSelection,
+  opts?: BroadcastOptions
 ): Promise<RunSummary[]> {
   switch (which) {
     case "digest":
-      return [await runDailyDigestBroadcast(bot)];
+      return [await runDailyDigestBroadcast(bot, opts)];
     case "fal":
-      return [await runDailyFalBroadcast(bot)];
+      return [await runDailyFalBroadcast(bot, opts)];
     case "yalda":
-      return [await runYaldaBroadcast(bot)];
+      return [await runYaldaBroadcast(bot, opts)];
     case "morning":
-      return [await runDailyDigestBroadcast(bot), await runDailyFalBroadcast(bot)];
+      return [
+        await runDailyDigestBroadcast(bot, opts),
+        await runDailyFalBroadcast(bot, opts),
+      ];
   }
 }
 
@@ -314,6 +347,22 @@ function getDailyDigestSchedule(): { hour: number; minute: number } | null {
 }
 
 /**
+ * Test mode: `DAILY_DIGEST_EVERY_MINUTES=N` (1–59) replaces the daily send with
+ * a run every N minutes, each with its own cache key so every run picks fresh
+ * poems. Never set this on production.
+ */
+function getDailyDigestIntervalMinutes(): number | null {
+  const raw = process.env.DAILY_DIGEST_EVERY_MINUTES?.trim();
+  if (!raw) return null;
+  const n = parseInt(raw, 10);
+  return Number.isInteger(n) && n >= 1 && n <= 59 ? n : null;
+}
+
+function perRunCacheKey(): string {
+  return `${tehranDateKey()}T${new Date().toISOString().slice(11, 16)}`;
+}
+
+/**
  * Global scheduler switch: `DAILY_DIGEST_ENABLED=true` starts the crons. It
  * only decides whether the jobs run at all; who receives what is the per-user
  * `dailyDigest` / `dailyFal` opt-in. Call before long polling starts
@@ -334,16 +383,25 @@ function scheduleDailyDigest(bot: Bot): void {
     return;
   }
 
-  const morningCron = `${schedule.minute} ${schedule.hour} * * *`;
+  const every = getDailyDigestIntervalMinutes();
+  const morningCron = every
+    ? `*/${every} * * * *`
+    : `${schedule.minute} ${schedule.hour} * * *`;
   cron.schedule(
     morningCron,
     () => {
-      runDailyBroadcasts(bot, "morning").catch((e) =>
+      const opts = every ? { cacheKey: perRunCacheKey() } : undefined;
+      runDailyBroadcasts(bot, "morning", opts).catch((e) =>
         console.error("daily digest: morning run crashed", e)
       );
     },
     { timezone: TEHRAN_TZ }
   );
+  if (every) {
+    console.warn(
+      `daily digest: TEST MODE — poem+fal every ${every} min (DAILY_DIGEST_EVERY_MINUTES), fresh poems each run`
+    );
+  }
 
   cron.schedule(
     YALDA_CRON,
@@ -363,6 +421,7 @@ function scheduleDailyDigest(bot: Bot): void {
 
 export {
   formatRunSummary,
+  getDailyDigestIntervalMinutes,
   getDailyDigestSchedule,
   runDailyBroadcasts,
   runDailyDigestBroadcast,

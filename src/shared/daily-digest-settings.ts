@@ -1,6 +1,9 @@
 import { Context, InlineKeyboard } from "grammy";
 import type { InlineKeyboardButton, User } from "grammy/types";
-import { getDailyDigestSchedule } from "../jobs/daily-digest";
+import {
+  getDailyDigestIntervalMinutes,
+  getDailyDigestSchedule,
+} from "../jobs/daily-digest";
 import { saveAnalyticsEvent } from "../services/analytics";
 import PersianPoemsTelegramBot from "../services/telegram-bot";
 import {
@@ -40,6 +43,8 @@ function toFaDigits(s: string): string {
 }
 
 function scheduleLabelFa(): string {
+  const every = getDailyDigestIntervalMinutes();
+  if (every) return `هر ${toFaDigits(String(every))} دقیقه (حالت تست)`;
   const schedule = getDailyDigestSchedule();
   if (!schedule) return "هر روز صبح";
   const hh = String(schedule.hour).padStart(2, "0");
