@@ -11,6 +11,7 @@ import { addNezamiFaCallbacks } from "./poets/nezami/fa";
 import { addFerdousiFaCallbacks } from "./poets/ferdousi/fa";
 import { addPoemNavCallbacks } from "./shared/poem-nav-callbacks";
 import { startHealthServer } from "./http/health-server";
+import { registerBotCommands } from "./shared/bot-commands";
 import { startWebhookServer } from "./http/webhook-server";
 import { scheduleDailyDigest } from "./jobs/daily-digest";
 
@@ -44,6 +45,7 @@ async function main() {
 
   // Before the transport: long polling (`bot.start()`) does not return until the bot stops.
   scheduleDailyDigest(PersianPoemsTelegramBot.bot);
+  await registerBotCommands(PersianPoemsTelegramBot.bot);
 
   const transport = resolveTransport();
   if (transport === "webhook") {

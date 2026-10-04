@@ -13,4 +13,4 @@ function isAdmin(telegramId: number | undefined): boolean {
   return telegramId !== undefined && adminTelegramIds().has(telegramId);
 }
 
-export { isAdmin };
+export { adminTelegramIds, isAdmin };
