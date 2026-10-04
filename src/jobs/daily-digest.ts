@@ -40,7 +40,6 @@ type BroadcastOptions = {
   /** Cache key instead of the Tehran day; interval mode passes one per run so every run picks fresh poems. */
   cacheKey?: string;
 };
-| "digest" | "fal" | "yalda";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
